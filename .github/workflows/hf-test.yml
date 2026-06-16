@@ -11,6 +11,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install hf CLI
+        run: pipx install "huggingface_hub[cli]"
+
       - name: Login to HF
         env:
           HF_TOKEN: ${{ secrets.TOKEN }}
