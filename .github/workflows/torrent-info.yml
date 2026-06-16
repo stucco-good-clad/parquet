@@ -1,0 +1,18 @@
+name: torrent-info
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  show-torrent:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install transmission-cli
+        run: sudo apt-get update && sudo apt-get install -y transmission-cli
+
+      - name: Show torrent contents
+        run: transmission-show aa_derived_mirror_metadata_20260208.torrent
