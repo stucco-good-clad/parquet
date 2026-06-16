@@ -11,13 +11,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install huggingface_hub
-        run: pip install "huggingface_hub[cli]"
-
       - name: Login to HF
         env:
           HF_TOKEN: ${{ secrets.TOKEN }}
-        run: huggingface-cli login --token "$HF_TOKEN"
+        run: hf auth login --token "$HF_TOKEN"
 
       - name: List files in bucket
         run: hf buckets ls stucco-good-clad/zlib-storage
