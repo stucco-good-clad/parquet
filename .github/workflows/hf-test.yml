@@ -6,33 +6,21 @@ on:
   workflow_dispatch:
 
 jobs:
-  test-hf-access:
+  test-hf-bucket:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
       - name: Install huggingface_hub
-        run: pip install huggingface_hub
+        run: pip install "huggingface_hub[cli]"
 
-      - name: List files in stucco-good-clad/zlib-storage
+      - name: Login to HF
         env:
           HF_TOKEN: ${{ secrets.TOKEN }}
-        run: |
-          python3 -c "
-          from huggingface_hub import HfApi
-          api = HfApi()
-          print('=== Files in stucco-good-clad/zlib-storage ===')
-          files = api.list_repo_tree('stucco-good-clad/zlib-storage', repo_type='dataset')
-          for f in files:
-              size = f.size if hasattr(f, 'size') and f.size else '?'
-              print(f'  {f.path}  ({size})')
-          "
+        run: huggingface-cli login --token "$HF_TOKEN"
 
-      - name: Download a small test file
-        env:
-          HF_TOKEN: ${{ secrets.TOKEN }}
-        run: |
-          mkdir -p /tmp/hf-test
-          huggingface-cli download stucco-good-clad/zlib-storage --repo-type dataset --local-dir /tmp/hf-test
-          echo "=== Downloaded ==="
-          ls -lhR /tmp/hf-test/
+      - name: List files in bucket
+        run: hf buckets ls stucco-good-clad/zlib-storage
+
+      - name: Show bucket info
+        run: hf buckets info stucco-good-clad/zlib-storage
