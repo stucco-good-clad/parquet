@@ -16,7 +16,7 @@ jobs:
 
       - name: Download ES shard 0 (13 GiB)
         run: |
-          aria2c --select-file=4 --dir=./data aa_derived_mirror_metadata_20260208.torrent
+          aria2c --select-file=4 --dir=./data --summary-interval=1 --console-log-level=notice aa_derived_mirror_metadata_20260208.torrent
 
       - name: Show downloaded files and sizes
         run: |
