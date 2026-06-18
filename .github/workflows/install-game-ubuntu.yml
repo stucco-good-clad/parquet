@@ -22,11 +22,15 @@ jobs:
 
       - name: Mount HF bucket
         run: |
-          mkdir -p /hf-drive
-          nohup hf-mount-nfs --hf-token "${{ secrets.HF_TOKEN }}" bucket "${{ vars.HF_BUCKET }}" /hf-drive > /tmp/hf-mount.log 2>&1 &
-          sleep 15
-          mount | grep hf-drive
-          df -h /hf-drive
+          sudo mkdir -p /hf-drive
+          sudo chown runner:runner /hf-drive
+          hf-mount-nfs \
+            --hf-token "${{ secrets.HF_TOKEN }}" \
+            bucket "${{ vars.HF_BUCKET }}" \
+            /hf-drive &
+          sleep 5
+          echo "Mount status:"
+          ls -la /hf-drive/
 
       - name: Download parts to bucket
         run: |
