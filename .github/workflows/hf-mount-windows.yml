@@ -14,29 +14,61 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup WSL + hf-mount
+      - name: Install WSL2 + Ubuntu
         run: |
-          # Install nfs-common in WSL (for mount.nfs)
-          wsl -u root -- bash -c "apt-get update && apt-get install -y nfs-common curl"
-          # Download hf-mount NFS binary into WSL
-          wsl -- bash -c "curl -sL https://github.com/huggingface/hf-mount/releases/latest/download/hf-mount-nfs-x86_64-linux -o /usr/local/bin/hf-mount-nfs && chmod +x /usr/local/bin/hf-mount-nfs && hf-mount-nfs --version"
+          wsl --install --no-launch
+          # Wait for install to finish
+          Start-Sleep -Seconds 10
+          # Restart WSL service
+          wsl --shutdown
+          Start-Sleep -Seconds 3
+          # Set default version to 2
+          wsl --set-default-version 2
+          # List installed distros
+          wsl -l -v
+
+      - name: Setup hf-mount in WSL
+        run: |
+          # Install dependencies inside Ubuntu
+          wsl -d Ubuntu -u root -- bash -c "apt-get update && apt-get install -y nfs-common curl"
+          # Download hf-mount NFS binary
+          wsl -d Ubuntu -- bash -c "curl -sL https://github.com/huggingface/hf-mount/releases/latest/download/hf-mount-nfs-x86_64-linux -o /usr/local/bin/hf-mount-nfs && chmod +x /usr/local/bin/hf-mount-nfs && hf-mount-nfs --version"
 
       - name: Mount bucket via WSL
         run: |
           # Create mount point inside WSL
-          wsl -u root -- bash -c "mkdir -p /hf-drive && chown runner:runner /hf-drive"
-          # Start hf-mount in background inside WSL
-          wsl -- bash -c "hf-mount-nfs --hf-token '${{ secrets.HF_TOKEN }}' bucket '${{ vars.HF_BUCKET }}' /hf-drive &"
-          Start-Sleep -Seconds 8
+          wsl -d Ubuntu -u root -- bash -c "mkdir -p /hf-drive && chown root:root /hf-drive"
+          # Start hf-mount in background
+          $job = Start-Job -ScriptBlock {
+            wsl -d Ubuntu -- bash -c "export PYTHONIOENCODING=utf-8; hf-mount-nfs --hf-token '${{ secrets.HF_TOKEN }}' bucket '${{ vars.HF_BUCKET }}' /hf-drive 2>&1"
+          }
+          Write-Host "Mount job started, waiting 15s..."
+          Start-Sleep -Seconds 15
+          # Check job status
+          Receive-Job $job
           # Verify mount from Windows side
-          Write-Host "=== Bucket via WSL ==="
-          wsl -- ls -la /hf-drive/
+          Write-Host "`n=== Bucket via WSL ==="
+          Get-ChildItem "\\wsl.localhost\Ubuntu\hf-drive" -Force -ErrorAction SilentlyContinue
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "Trying alternate path..."
+            Get-ChildItem "\\wsl$\Ubuntu\hf-drive" -Force -ErrorAction SilentlyContinue
+          }
 
-      - name: Access from Windows
+      - name: Test access from Windows
         run: |
-          # WSL paths are accessible from Windows via \\wsl$\Ubuntu\
-          Write-Host "=== Accessing bucket from Windows ==="
-          Get-ChildItem "\\wsl$\Ubuntu\hf-drive" -Force -ErrorAction SilentlyContinue
-          Write-Host ""
-          Write-Host "=== WSL mount status ==="
-          wsl -- df -h /hf-drive
+          Write-Host "=== Listing bucket contents ==="
+          $path = "\\wsl.localhost\Ubuntu\hf-drive"
+          if (Test-Path $path) {
+            Get-ChildItem $path -Force | Select-Object Name, Length, LastWriteTime | Format-Table
+          } else {
+            $path = "\\wsl$\Ubuntu\hf-drive"
+            if (Test-Path $path) {
+              Get-ChildItem $path -Force | Select-Object Name, Length, LastWriteTime | Format-Table
+            } else {
+              Write-Host "Mount path not accessible, trying WSL directly..."
+              wsl -d Ubuntu -- ls -la /hf-drive/
+            }
+          }
+
+          Write-Host "`n=== WSL disk usage ==="
+          wsl -d Ubuntu -- df -h /hf-drive
