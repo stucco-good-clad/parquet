@@ -39,26 +39,40 @@ jobs:
           wsl -d Ubuntu -u root -- bash -c "apt-get update -qq && apt-get install -y -qq nfs-common curl 2>&1 | tail -3"
           wsl -d Ubuntu -- bash -c "curl -sL https://github.com/huggingface/hf-mount/releases/latest/download/hf-mount-nfs-x86_64-linux -o /usr/local/bin/hf-mount-nfs && chmod +x /usr/local/bin/hf-mount-nfs && hf-mount-nfs --version"
 
-      - name: Mount and test
+      - name: Mount bucket (detached)
         shell: pwsh
         run: |
           $token = "${{ secrets.HF_TOKEN }}"
           $bucket = "${{ vars.HF_BUCKET }}"
-          $bashScript = 'export PYTHONIOENCODING=utf-8' + "`n"
-          $bashScript += 'mkdir -p /hf-drive' + "`n"
-          $bashScript += 'echo Starting hf-mount...' + "`n"
-          $bashScript += "nohup hf-mount-nfs --hf-token '$token' bucket '$bucket' /hf-drive > /tmp/hf-mount.log 2>&1 &" + "`n"
-          $bashScript += 'MOUNT_PID=$!' + "`n"
-          $bashScript += 'echo Mount PID: $MOUNT_PID' + "`n"
-          $bashScript += 'sleep 15' + "`n"
-          $bashScript += 'cat /tmp/hf-mount.log' + "`n"
-          $bashScript += 'mount | grep hf-drive || echo NOT MOUNTED' + "`n"
-          $bashScript += 'timeout 15 sh -c "echo test > /hf-drive/_test.txt && echo WRITE_OK || echo WRITE_FAILED"' + "`n"
-          $bashScript += 'timeout 15 cat /hf-drive/_test.txt 2>&1 || echo READ_FAILED' + "`n"
-          $bashScript += 'rm -f /hf-drive/_test.txt 2>/dev/null' + "`n"
-          $bashScript += 'kill -0 $MOUNT_PID 2>/dev/null && echo MOUNT_ALIVE || echo MOUNT_DEAD' + "`n"
           
-          wsl -d Ubuntu -- bash -c $bashScript
+          # Start-Process launches WSL fully detached from PowerShell
+          Start-Process -FilePath "wsl" -ArgumentList @("-d", "Ubuntu", "--", "bash", "-c", "export PYTHONIOENCODING=utf-8; mkdir -p /hf-drive; nohup hf-mount-nfs --hf-token '$token' bucket '$bucket' /hf-drive > /tmp/hf-mount.log 2>&1 &")
+          
+          Write-Host "Waiting 15s for mount..."
+          Start-Sleep -Seconds 15
+          
+          Write-Host "=== Mount log ==="
+          wsl -d Ubuntu -- cat /tmp/hf-mount.log 2>&1
+
+      - name: Test mount
+        shell: pwsh
+        run: |
+          Write-Host "=== Mount status ==="
+          wsl -d Ubuntu -- mount | grep hf-drive
+          
+          Write-Host "`n=== Write test ==="
+          wsl -d Ubuntu -- bash -c "echo test > /hf-drive/_test.txt && echo WRITE_OK || echo WRITE_FAILED"
+          
+          Write-Host "`n=== Read test ==="
+          wsl -d Ubuntu -- bash -c "cat /hf-drive/_test.txt 2>&1"
+          
+          wsl -d Ubuntu -- bash -c "rm -f /hf-drive/_test.txt"
+
+      - name: Verify mount persists
+        shell: pwsh
+        run: |
+          Write-Host "=== Is mount still alive after previous step? ==="
+          wsl -d Ubuntu -- bash -c "mount | grep hf-drive && echo MOUNT_ALIVE || echo MOUNT_DEAD"
 
       - name: Cleanup
         if: always()
