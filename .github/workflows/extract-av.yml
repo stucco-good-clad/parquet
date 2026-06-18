@@ -49,10 +49,9 @@ jobs:
         run: |
           $extracted = "$env:TEMP\extracted"
           Start-Process -Wait -FilePath "$extracted\setup.exe" -ArgumentList @(
-            "/VERYSILENT",
+            "/SILENT",
             "/DIR=C:\game",
             "/NORESTART",
-            "/SUPPRESSMSGBOXES",
             "/CLOSEAPPLICATIONS",
             "/FORCECLOSEAPPLICATIONS"
           )
