@@ -14,30 +14,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup hf CLI
+      - name: Setup WSL + hf-mount
         run: |
-          pip install huggingface_hub
-          hf --version
-          hf auth login --token "${{ secrets.HF_TOKEN }}"
+          # Install nfs-common in WSL (for mount.nfs)
+          wsl -u root -- bash -c "apt-get update && apt-get install -y nfs-common curl"
+          # Download hf-mount NFS binary into WSL
+          wsl -- bash -c "curl -sL https://github.com/huggingface/hf-mount/releases/latest/download/hf-mount-nfs-x86_64-linux -o /usr/local/bin/hf-mount-nfs && chmod +x /usr/local/bin/hf-mount-nfs && hf-mount-nfs --version"
 
-      - name: List bucket contents
+      - name: Mount bucket via WSL
         run: |
-          Write-Host "=== Bucket: $env:HF_BUCKET ==="
-          hf buckets ls $env:HF_BUCKET
+          # Create mount point inside WSL
+          wsl -u root -- bash -c "mkdir -p /hf-drive && chown runner:runner /hf-drive"
+          # Start hf-mount in background inside WSL
+          wsl -- bash -c "hf-mount-nfs --hf-token '${{ secrets.HF_TOKEN }}' bucket '${{ vars.HF_BUCKET }}' /hf-drive &"
+          Start-Sleep -Seconds 8
+          # Verify mount from Windows side
+          Write-Host "=== Bucket via WSL ==="
+          wsl -- ls -la /hf-drive/
 
-      - name: Upload test file
+      - name: Access from Windows
         run: |
-          "Hello from GitHub Actions $(Get-Date)" | Out-File -FilePath "test-upload.txt" -Encoding utf8
-          Write-Host "Uploading test file..."
-          hf buckets cp test-upload.txt "hf://buckets/$env:HF_BUCKET/test-upload.txt"
-          Write-Host "`n=== Bucket after upload ==="
-          hf buckets ls $env:HF_BUCKET
-
-      - name: Download and verify
-        run: |
-          $env:PYTHONIOENCODING = "utf-8"
-          [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-          New-Item -ItemType Directory -Force -Path "downloaded" | Out-Null
-          hf buckets cp "hf://buckets/$env:HF_BUCKET/test-upload.txt" "downloaded/test-upload.txt" 2>&1 | Out-Null
-          Write-Host "Downloaded file:"
-          Get-Content "downloaded/test-upload.txt"
+          # WSL paths are accessible from Windows via \\wsl$\Ubuntu\
+          Write-Host "=== Accessing bucket from Windows ==="
+          Get-ChildItem "\\wsl$\Ubuntu\hf-drive" -Force -ErrorAction SilentlyContinue
+          Write-Host ""
+          Write-Host "=== WSL mount status ==="
+          wsl -- df -h /hf-drive
