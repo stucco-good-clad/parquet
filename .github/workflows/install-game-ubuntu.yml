@@ -1,4 +1,4 @@
-name: Install Game (Ubuntu + Docker)
+name: Install Game (Ubuntu + Windows Container)
 
 on:
   workflow_dispatch:
@@ -12,7 +12,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq unrar p7zip-full aria2 curl nfs-common
+          sudo apt-get install -y -qq unrar p7zip-full curl nfs-common
 
       - name: Install hf-mount
         run: |
@@ -53,92 +53,81 @@ jobs:
 
       - name: Delete parts
         run: |
-          echo "Deleting parts..."
+          echo "Deleting parts from bucket..."
           rm -rf /hf-drive/AV/parts
           echo "=== Remaining ==="
           ls -lh /hf-drive/AV/
 
-      - name: Pull Wine Docker image
+      - name: Enable Windows containers
         run: |
-          echo "Pulling Wine Docker image..."
-          docker pull scottyhardy/docker-wine:latest
+          docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+          docker info | grep -i "execution driver\|Architecture\|OSType"
 
-      - name: Install game via Docker
+      - name: Install game via Windows Server container
         run: |
-          echo "=== Starting Wine container with shared bucket ==="
+          echo "=== Starting Windows Server container with shared bucket ==="
           docker run -d \
-            --name wine-install \
+            --name win-install \
+            --platform windows/amd64 \
             -v /hf-drive:/hf-drive \
-            scottyhardy/docker-wine:latest \
-            tail -f /dev/null
+            mcr.microsoft.com/windows/servercore:ltsc2022 \
+            powershell.exe -Command "while($true){Start-Sleep -Seconds 60}"
 
-          echo "Container started. Waiting for Wine to initialize..."
-          docker exec wine-install wine wineboot --init 2>&1 | tail -5
+          echo "Waiting for container to be ready..."
+          sleep 30
 
-          SETUP=$(docker exec wine-install find /hf-drive/AV/extracted -name "setup.exe" -type f 2>/dev/null | head -1)
+          # Find setup.exe
+          SETUP=$(docker exec win-install powershell.exe -Command "Get-ChildItem -Path 'Z:\hf-drive\AV\extracted' -Filter 'setup.exe' -Recurse | Select-Object -First 1 -ExpandProperty FullName" 2>/dev/null | tr -d '\r')
           echo "Setup found: $SETUP"
 
           if [ -z "$SETUP" ]; then
             echo "ERROR: setup.exe not found!"
-            docker exec wine-install ls -lhR /hf-drive/AV/extracted/
+            docker exec win-install powershell.exe -Command "Get-ChildItem -Path 'Z:\hf-drive\AV\extracted' -Recurse | Select-Object FullName"
             exit 1
           fi
 
-          # Convert Linux path to Wine Z: path
-          SETUP_WIN=$(docker exec wine-install wine winepath -w "$SETUP" 2>/dev/null || echo "Z:\\hf-drive\\AV\\extracted\\setup.exe")
-          INSTALL_WIN="Z:\\hf-drive\\AV\\installed"
-          mkdir -p /hf-drive/AV/installed
+          # Create install dir
+          docker exec win-install powershell.exe -Command "New-Item -ItemType Directory -Force -Path 'Z:\hf-drive\AV\installed'"
 
-          echo "Setup (Windows path): $SETUP_WIN"
-          echo "Install dir (Windows path): $INSTALL_WIN"
-
-          # Run installer in background inside container
-          docker exec -d wine-install bash -c "
-            export DISPLAY=:0
-            wine '$SETUP_WIN' /DIR='$INSTALL_WIN' /SILENT /NORESTART /CLOSEAPPLICATIONS /FORCECLOSEAPPLICATIONS /LOG='Z:\\hf-drive\\AV\\install.log' 2>&1
-          &"
+          # Run installer
+          echo "Launching installer..."
+          docker exec -d win-install powershell.exe -Command "
+            Start-Process -FilePath '$SETUP' -ArgumentList '/SILENT','/DIR=Z:\hf-drive\AV\installed','/NORESTART','/CLOSEAPPLICATIONS','/FORCECLOSEAPPLICATIONS','/LOG=Z:\hf-drive\AV\install.log' -Wait
+          "
 
           echo "Installer launched. Monitoring..."
 
-          # Monitor: check for QuickSFV and log
-          KILLED=0
+          # Monitor
           for i in $(seq 1 180); do
             sleep 10
 
             # Check for QuickSFV
-            if docker exec wine-install bash -c "tasklist 2>/dev/null | grep -qi quicksfv" 2>/dev/null; then
+            if docker exec win-install powershell.exe -Command "Get-Process -Name 'QuickSFV' -ErrorAction SilentlyContinue" 2>/dev/null | grep -q "QuickSFV"; then
               echo "[!] QuickSFV detected — killing installer"
-              docker exec wine-install bash -c "taskkill /F /IM setup.exe 2>/dev/null; taskkill /F /IM QuickSFV.exe 2>/dev/null" 2>/dev/null
-              KILLED=1
+              docker exec win-install powershell.exe -Command "Stop-Process -Name 'setup' -Force -ErrorAction SilentlyContinue; Stop-Process -Name 'QuickSFV' -Force -ErrorAction SilentlyContinue" 2>/dev/null
               break
-            fi
-
-            # Show log tail
-            if [ -f /hf-drive/AV/install.log ]; then
-              tail -1 /hf-drive/AV/install.log 2>/dev/null
             fi
 
             # Show install dir size
             if [ -d /hf-drive/AV/installed ]; then
-              echo "  [disk] installed = $(du -sh /hf-drive/AV/installed 2>/dev/null | cut -f1)"
+              SIZE=$(du -sh /hf-drive/AV/installed 2>/dev/null | cut -f1)
+              echo "  [disk] installed = $SIZE"
             fi
 
-            # Check if installer exited
-            RUNNING=$(docker exec wine-install bash -c "tasklist 2>/dev/null | grep -qi setup.exe && echo yes || echo no" 2>/dev/null)
-            if [ "$RUNNING" = "no" ] && [ "$KILLED" -eq 0 ]; then
-              echo "Installer exited naturally."
-              break
+            # Check log
+            if [ -f /hf-drive/AV/install.log ]; then
+              tail -1 /hf-drive/AV/install.log 2>/dev/null
             fi
           done
 
           echo "=== Install step complete ==="
-          docker exec wine-install ls -lh /hf-drive/AV/installed/ 2>/dev/null | head -20
+          docker exec win-install powershell.exe -Command "Get-ChildItem -Path 'Z:\hf-drive\AV\installed' | Select-Object Name,Length" 2>/dev/null | head -20
 
       - name: Stop container
         if: always()
         run: |
-          docker stop wine-install 2>/dev/null || true
-          docker rm wine-install 2>/dev/null || true
+          docker stop win-install 2>/dev/null || true
+          docker rm win-install 2>/dev/null || true
 
       - name: Zip installed game
         run: |
@@ -157,5 +146,5 @@ jobs:
       - name: Cleanup
         if: always()
         run: |
-          docker rm -f wine-install 2>/dev/null || true
+          docker rm -f win-install 2>/dev/null || true
           pkill -f hf-mount-nfs 2>/dev/null || true
