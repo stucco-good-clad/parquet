@@ -1,0 +1,40 @@
+name: Mount HF Bucket
+
+on:
+  push:
+    branches: ["*"]
+  workflow_dispatch:
+
+env:
+  HF_BUCKET: ${{ vars.HF_BUCKET }}
+
+jobs:
+  mount:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install hf-mount
+        run: |
+          curl -sL https://github.com/huggingface/hf-mount/releases/latest/download/hf-mount-nfs-x86_64-linux -o /usr/local/bin/hf-mount-nfs
+          chmod +x /usr/local/bin/hf-mount-nfs
+          hf-mount-nfs --version
+
+      - name: Mount bucket
+        run: |
+          mkdir -p /mnt/hf-bucket
+          hf-mount-nfs \
+            --hf-token "${{ secrets.HF_TOKEN }}" \
+            bucket "${{ vars.HF_BUCKET }}" \
+            /mnt/hf-bucket &
+          sleep 5
+          echo "Mount status:"
+          ls -la /mnt/hf-bucket/
+
+      - name: Verify mount
+        run: |
+          echo "=== Bucket contents ==="
+          ls -la /mnt/hf-bucket/ || echo "(empty or mount failed)"
+          echo ""
+          echo "=== Disk usage ==="
+          df -h /mnt/hf-bucket
