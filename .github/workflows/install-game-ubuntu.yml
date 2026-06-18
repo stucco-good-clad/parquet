@@ -36,8 +36,8 @@ jobs:
         run: |
           BASE="https://github.com/stucco-good-clad/parquet/releases/download/av"
           mkdir -p /hf-drive/AV/parts
-          echo "Downloading RAR parts..."
-          aria2c -x 16 -s 16 -j 5 -d /hf-drive/AV/parts \
+          echo "Downloading RAR parts sequentially..."
+          aria2c -x 16 -s 16 -j 1 --file-allocation=none -d /hf-drive/AV/parts \
             "$BASE/AV.part1.rar" \
             "$BASE/AV.part2.rar" \
             "$BASE/AV.part3.rar" \
