@@ -1,0 +1,138 @@
+name: Install Game (Ubuntu + Wine)
+
+on:
+  workflow_dispatch:
+
+env:
+  HF_BUCKET: ${{ vars.HF_BUCKET }}
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq unrar p7zip-full aria2 curl
+
+      - name: Install hf-mount
+        run: |
+          curl -sL https://github.com/huggingface/hf-mount/releases/latest/download/hf-mount-nfs-x86_64-linux -o /usr/local/bin/hf-mount-nfs
+          chmod +x /usr/local/bin/hf-mount-nfs
+          hf-mount-nfs --version
+
+      - name: Mount HF bucket
+        run: |
+          mkdir -p /hf-drive
+          nohup hf-mount-nfs --hf-token "${{ secrets.HF_TOKEN }}" bucket "${{ vars.HF_BUCKET }}" /hf-drive > /tmp/hf-mount.log 2>&1 &
+          sleep 15
+          mount | grep hf-drive
+          echo "=== Mount log ==="
+          cat /tmp/hf-mount.log
+
+      - name: Download RAR parts to bucket
+        run: |
+          BASE="https://github.com/stucco-good-clad/parquet/releases/download/av"
+          mkdir -p /hf-drive/AV/parts
+          echo "Downloading 5 RAR parts..."
+          aria2c -x 16 -s 16 -j 5 -d /hf-drive/AV/parts \
+            "$BASE/AV.part1.rar" \
+            "$BASE/AV.part2.rar" \
+            "$BASE/AV.part3.rar" \
+            "$BASE/AV.part4.rar" \
+            "$BASE/AV.part5.rar"
+          echo "=== Downloaded ==="
+          ls -lh /hf-drive/AV/parts/
+
+      - name: Extract to bucket
+        run: |
+          echo "Extracting..."
+          unrar x -o+ /hf-drive/AV/parts/AV.part1.rar /hf-drive/AV/installed/
+          echo "=== Extracted ==="
+          ls -lh /hf-drive/AV/installed/
+          echo "=== Deleting parts ==="
+          rm -rf /hf-drive/AV/parts
+          echo "Parts deleted."
+
+      - name: Install Wine
+        run: |
+          sudo dpkg --add-architecture i386
+          sudo mkdir -pm755 /etc/apt/keyrings
+          sudo wget -O /etc/apt/keyrings/winehq-archive.key https://dl.winehq.org/wine-builds/winehq.key
+          sudo wget -NP /etc/apt/sources.list.d/ https://dl.winehq.org/wine-builds/ubuntu/dists/$(lsb_release -cs)/winehq-$(lsb_release -cs).sources
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --install-recommends winehq-stable
+
+      - name: Run installer via Wine
+        run: |
+          export WINEPREFIX=/tmp/wineprefix
+          export WINEARCH=win64
+          mkdir -p "$WINEPREFIX"
+          echo "=== Initializing Wine prefix ==="
+          wineboot --init 2>&1 | tail -5
+
+          SETUP="/hf-drive/AV/installed/setup.exe"
+          INSTALL_DIR="Z:\\hf-drive\\AV\\game"
+
+          echo "=== Starting installer ==="
+          echo "Setup: $SETUP"
+          echo "Install to: $INSTALL_DIR"
+
+          # Start installer in background
+          wine "$SETUP" /DIR="$INSTALL_DIR" /SILENT /NORESTART /CLOSEAPPLICATIONS /FORCECLOSEAPPLICATIONS &
+          INSTALLER_PID=$!
+          echo "Installer PID: $INSTALLER_PID"
+
+          # Monitor and kill QuickSFV when it spawns
+          echo "Monitoring for QuickSFV..."
+          for i in $(seq 1 120); do
+            sleep 10
+            if pgrep -f "QuickSFV" > /dev/null 2>&1; then
+              echo "[!] QuickSFV detected — killing installer tree"
+              kill -9 $INSTALLER_PID 2>/dev/null
+              pkill -f "setup.exe" 2>/dev/null
+              pkill -f "QuickSFV" 2>/dev/null
+              break
+            fi
+            # Show disk usage
+            if [ -d "/hf-drive/AV/game" ]; then
+              echo "  [disk] game dir = $(du -sh /hf-drive/AV/game 2>/dev/null | cut -f1)"
+            fi
+            # Check if installer exited
+            if ! kill -0 $INSTALLER_PID 2>/dev/null; then
+              echo "Installer exited."
+              break
+            fi
+          done
+
+          echo "=== Install complete ==="
+          ls -lh /hf-drive/AV/game/ 2>/dev/null || echo "Game dir not found"
+
+      - name: Zip installed game
+        run: |
+          echo "=== Zipping ==="
+          tar -czf /hf-drive/AV/AV.Director.Life.tar.gz -C /hf-drive/AV/game .
+          ls -lh /hf-drive/AV/AV.Director.Life.tar.gz
+
+      - name: Upload to bzzhr.co
+        run: |
+          FILE="/hf-drive/AV/AV.Director.Life.tar.gz"
+          SIZE=$(ls -lh "$FILE" | awk '{print $5}')
+          echo "=== Uploading $SIZE to bzzhr.co ==="
+          RESPONSE=$(curl -T "$FILE" "https://w.bzzhr.co/AV.Director.Life.tar.gz" 2>&1)
+          echo "$RESPONSE"
+          echo "$RESPONSE" | python3 -c "
+          import sys, json
+          data = json.load(sys.stdin)
+          if data.get('code') == 201:
+              print(f\"Download: https://bzzhr.co/{data['data']['id']}\")
+              print(f\"Expires: {data['data']['expiry']}\")
+          "
+
+      - name: Cleanup
+        if: always()
+        run: |
+          pkill -f hf-mount-nfs 2>/dev/null
+          rm -rf /tmp/wineprefix
