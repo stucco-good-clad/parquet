@@ -1,0 +1,36 @@
+name: Extract AV
+
+on:
+  push:
+    branches: ["*"]
+  workflow_dispatch:
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install unrar
+        run: sudo apt-get update && sudo apt-get install -y unrar
+
+      - name: Download RAR parts
+        run: |
+          mkdir -p download
+          for i in $(seq 1 5); do
+            echo "Downloading part $i..."
+            wget -q -O "download/AV.part${i}.rar" \
+              "https://github.com/stucco-good-clad/parquet/releases/download/av/AV.part${i}.rar"
+          done
+          echo "All parts downloaded."
+          ls -lh download/
+
+      - name: Extract and merge
+        run: |
+          mkdir -p extracted
+          unrar x -o+ download/AV.part1.rar extracted/
+
+      - name: Show tree
+        run: |
+          sudo apt-get install -y tree
+          tree -a extracted/
