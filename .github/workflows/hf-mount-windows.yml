@@ -9,64 +9,112 @@ env:
 jobs:
   mount:
     runs-on: windows-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
       - name: Install WSL2 + Ubuntu
+        shell: pwsh
         run: |
-          wsl --install --no-launch
-          # Wait for install to finish
-          Start-Sleep -Seconds 10
-          # Restart WSL service
-          wsl --shutdown
-          Start-Sleep -Seconds 3
-          # Set default version to 2
-          wsl --set-default-version 2
-          # List installed distros
+          # Check if WSL is already available
+          $wsl = Get-Command wsl.exe -ErrorAction SilentlyContinue
+          if (-not $wsl) {
+            Write-Host "Installing WSL2..."
+            wsl --install --no-launch
+            Start-Sleep -Seconds 15
+            wsl --shutdown
+            Start-Sleep -Seconds 3
+          }
+          Write-Host "=== Installed distros ==="
           wsl -l -v
+          Write-Host ""
+          Write-Host "=== WSL version ==="
+          wsl --version
 
-      - name: Setup hf-mount in WSL
+      - name: Setup hf-mount in Ubuntu
+        shell: pwsh
         run: |
-          # Install dependencies inside Ubuntu
-          wsl -d Ubuntu -u root -- bash -c "apt-get update && apt-get install -y nfs-common curl"
-          # Download hf-mount NFS binary
-          wsl -d Ubuntu -- bash -c "curl -sL https://github.com/huggingface/hf-mount/releases/latest/download/hf-mount-nfs-x86_64-linux -o /usr/local/bin/hf-mount-nfs && chmod +x /usr/local/bin/hf-mount-nfs && hf-mount-nfs --version"
+          Write-Host "=== Installing deps in Ubuntu ==="
+          wsl -d Ubuntu -u root -- bash -c "apt-get update -qq && apt-get install -y -qq nfs-common curl python3 python3-pip 2>&1 | tail -5"
+          
+          Write-Host "`n=== Installing hf-mount via pip ==="
+          wsl -d Ubuntu -- bash -c "pip3 install hf-mount 2>&1 | tail -5"
+          
+          Write-Host "`n=== Verifying hf-mount-nfs ==="
+          wsl -d Ubuntu -- bash -c "which hf-mount-nfs || echo 'Not found via pip, downloading binary...'"
+          
+          wsl -d Ubuntu -- bash -c "curl -sL https://github.com/huggingface/hf-mount/releases/latest/download/hf-mount-nfs-x86_64-linux -o /usr/local/bin/hf-mount-nfs 2>&1 && chmod +x /usr/local/bin/hf-mount-nfs && hf-mount-nfs --version 2>&1"
 
-      - name: Mount bucket via WSL
+      - name: Test hf-mount help
+        shell: pwsh
         run: |
-          # Create mount point inside WSL
-          wsl -d Ubuntu -u root -- bash -c "mkdir -p /hf-drive && chown root:root /hf-drive"
-          # Start hf-mount in background
+          wsl -d Ubuntu -- bash -c "hf-mount-nfs --help 2>&1" | Select-Object -First 20
+
+      - name: Mount bucket
+        shell: pwsh
+        run: |
+          # Create mount point
+          wsl -d Ubuntu -u root -- bash -c "mkdir -p /hf-drive"
+          
+          # Start hf-mount in background inside WSL
+          $token = "${{ secrets.HF_TOKEN }}"
+          $bucket = "${{ vars.HF_BUCKET }}"
+          
+          Write-Host "Starting hf-mount..."
+          Write-Host "Bucket: $bucket"
+          Write-Host "Token length: $($token.Length)"
+          
+          # Run hf-mount directly (no backgrounding yet - let's see output)
           $job = Start-Job -ScriptBlock {
-            wsl -d Ubuntu -- bash -c "export PYTHONIOENCODING=utf-8; hf-mount-nfs --hf-token '${{ secrets.HF_TOKEN }}' bucket '${{ vars.HF_BUCKET }}' /hf-drive 2>&1"
-          }
-          Write-Host "Mount job started, waiting 15s..."
-          Start-Sleep -Seconds 15
+            param($t, $b)
+            wsl -d Ubuntu -- bash -c "export PYTHONIOENCODING=utf-8; hf-mount-nfs --hf-token '$t' bucket '$b' /hf-drive 2>&1"
+          } -ArgumentList $token, $bucket
+          
+          # Wait for mount to establish
+          Start-Sleep -Seconds 20
+          
           # Check job status
-          Receive-Job $job
-          # Verify mount from Windows side
-          Write-Host "`n=== Bucket via WSL ==="
-          Get-ChildItem "\\wsl.localhost\Ubuntu\hf-drive" -Force -ErrorAction SilentlyContinue
-          if ($LASTEXITCODE -ne 0) {
-            Write-Host "Trying alternate path..."
-            Get-ChildItem "\\wsl$\Ubuntu\hf-drive" -Force -ErrorAction SilentlyContinue
+          $state = $job | Receive-Job -ErrorAction SilentlyContinue
+          Write-Host "Job output: $state"
+          Write-Host "Job state: $($job.State)"
+          
+          if ($job.State -eq "Failed") {
+            Stop-Job $job
+            Remove-Job $job
+            Write-Host "Mount failed, trying alternative approach..."
           }
 
-      - name: Test access from Windows
+      - name: Check mount from WSL
+        shell: pwsh
         run: |
-          Write-Host "=== Listing bucket contents ==="
-          $path = "\\wsl.localhost\Ubuntu\hf-drive"
-          if (Test-Path $path) {
-            Get-ChildItem $path -Force | Select-Object Name, Length, LastWriteTime | Format-Table
-          } else {
-            $path = "\\wsl$\Ubuntu\hf-drive"
-            if (Test-Path $path) {
-              Get-ChildItem $path -Force | Select-Object Name, Length, LastWriteTime | Format-Table
+          Write-Host "=== Mount inside WSL ==="
+          wsl -d Ubuntu -- bash -c "mount | grep hf-drive || echo 'Not mounted'"
+          Write-Host ""
+          Write-Host "=== ls /hf-drive ==="
+          wsl -d Ubuntu -- bash -c "ls -la /hf-drive/ 2>&1" | Select-Object -First 10
+          Write-Host ""
+          Write-Host "=== df /hf-drive ==="
+          wsl -d Ubuntu -- df -h /hf-drive 2>&1
+
+      - name: Check Windows path
+        shell: pwsh
+        run: |
+          # Try all possible WSL Windows paths
+          $paths = @(
+            "\\wsl.localhost\Ubuntu\hf-drive",
+            "\\wsl$\Ubuntu\hf-drive",
+            "\\wsl.localhost\Ubuntu\home\runner\hf-drive",
+            "\\wsl$\Ubuntu\home\runner\hf-drive"
+          )
+          
+          foreach ($p in $paths) {
+            Write-Host "Testing: $p"
+            if (Test-Path $p -ErrorAction SilentlyContinue) {
+              Write-Host "  -> EXISTS! Listing contents:"
+              Get-ChildItem $p -Force -ErrorAction SilentlyContinue | Select-Object -First 5
+              break
             } else {
-              Write-Host "Mount path not accessible, trying WSL directly..."
-              wsl -d Ubuntu -- ls -la /hf-drive/
+              Write-Host "  -> NOT FOUND"
             }
           }
-
-          Write-Host "`n=== WSL disk usage ==="
-          wsl -d Ubuntu -- df -h /hf-drive
