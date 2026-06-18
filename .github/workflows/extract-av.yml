@@ -92,11 +92,11 @@ jobs:
                       $lastLine = $lines.Count
                   }
               }
-              # Kill QuickSFV when it spawns (decompression is done by then)
+              # Kill entire setup.exe tree when QuickSFV spawns (decompression done)
               $qsfv = Get-Process -Name "QuickSFV" -ErrorAction SilentlyContinue
               if ($qsfv -and !$qsfvKilled) {
-                  Write-Host "`n  [!] QuickSFV appeared (decompression done) — killing to unblock..."
-                  Stop-Process -Name "QuickSFV" -Force -ErrorAction SilentlyContinue
+                  Write-Host "`n  [!] QuickSFV appeared (decompression done) — killing installer tree..."
+                  Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
                   $qsfvKilled = $true
               }
               # Show disk usage of install dir
