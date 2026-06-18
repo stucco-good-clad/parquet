@@ -1,0 +1,45 @@
+name: Windows Runner Specs
+
+on:
+  workflow_dispatch:
+
+jobs:
+  specs:
+    runs-on: windows-latest
+    steps:
+      - name: System Info
+        run: |
+          Write-Host "=== OS ==="
+          Get-CimInstance Win32_OperatingSystem | Select-Object Caption, Version, BuildNumber, OSArchitecture | Format-List
+
+          Write-Host "=== CPU ==="
+          Get-CimInstance Win32_Processor | Select-Object Name, NumberOfCores, NumberOfLogicalProcessors, MaxClockSpeed | Format-List
+
+          Write-Host "=== RAM ==="
+          $ram = Get-CimInstance Win32_ComputerSystem
+          Write-Host "Total: $([math]::Round($ram.TotalPhysicalMemory/1GB, 2)) GB"
+          Get-CimInstance Win32_PhysicalMemory | Select-Object Capacity, Speed, Manufacturer | Format-Table -AutoSize
+
+          Write-Host "=== GPU ==="
+          Get-CimInstance Win32_VideoController | Select-Object Name, AdapterRAM, DriverVersion | Format-List
+
+          Write-Host "=== Disk ==="
+          Get-CimInstance Win32_LogicalDisk -Filter "DriveType=3" | Select-Object DeviceID,
+            @{N='Size GB';E={[math]::Round($_.Size/1GB,2)}},
+            @{N='Free GB';E={[math]::Round($_.FreeSpace/1GB,2)}},
+            @{N='Used %';E={[math]::Round(($_.Size-$_.FreeSpace)/$_.Size*100,1)}} | Format-Table -AutoSize
+
+      - name: Temp Disk Usage
+        run: |
+          Write-Host "=== Temp Drive ==="
+          $temp = $env:TEMP
+          Write-Host "TEMP path: $temp"
+          Write-Host "TEMP drive free: $([math]::Round((Get-PSDrive ($temp.Substring(0,1)).Free)/1GB, 2)) GB"
+
+          Write-Host "`n=== Environment ==="
+          Write-Host "OS: $env:OS"
+          Write-Host "PROCESSOR_IDENTIFIER: $env:PROCESSOR_IDENTIFIER"
+          Write-Host "NUMBER_OF_PROCESSORS: $env:NUMBER_OF_PROCESSORS"
+          Write-Host "PROCESSOR_ARCHITECTURE: $env:PROCESSOR_ARCHITECTURE"
+          Write-Host "COMPUTERNAME: $env:COMPUTERNAME"
+          Write-Host "USERNAME: $env:USERNAME"
