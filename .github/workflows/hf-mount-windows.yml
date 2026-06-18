@@ -14,29 +14,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install huggingface_hub
-        run: pip install huggingface_hub
+      - name: Setup hf CLI
+        run: |
+          hf --version
+          hf auth login --token "${{ secrets.HF_TOKEN }}"
 
       - name: List bucket contents
         run: |
-          $env:HF_TOKEN = "${{ secrets.HF_TOKEN }}"
-          huggingface-cli whoami
-          Write-Host "`n=== Bucket: $env:HF_BUCKET ==="
-          huggingface-cli buckets list $env:HF_BUCKET
+          Write-Host "=== Bucket: $env:HF_BUCKET ==="
+          hf buckets ls $env:HF_BUCKET
 
-      - name: Create test file and upload
+      - name: Upload test file
         run: |
-          $env:HF_TOKEN = "${{ secrets.HF_TOKEN }}"
           "Hello from GitHub Actions $(Get-Date)" | Out-File -FilePath "test-upload.txt" -Encoding utf8
-          Write-Host "Uploading test file to bucket..."
-          huggingface-cli buckets cp test-upload.txt "hf://buckets/$env:HF_BUCKET/test-upload.txt"
-          Write-Host "`n=== Bucket contents after upload ==="
-          huggingface-cli buckets list $env:HF_BUCKET
+          Write-Host "Uploading test file..."
+          hf buckets cp test-upload.txt "hf://buckets/$env:HF_BUCKET/test-upload.txt"
+          Write-Host "`n=== Bucket after upload ==="
+          hf buckets ls $env:HF_BUCKET
 
       - name: Download and verify
         run: |
-          $env:HF_TOKEN = "${{ secrets.HF_TOKEN }}"
           New-Item -ItemType Directory -Force -Path "downloaded" | Out-Null
-          huggingface-cli buckets cp "hf://buckets/$env:HF_BUCKET/test-upload.txt" "downloaded/test-upload.txt"
-          Write-Host "`nDownloaded file content:"
+          hf buckets cp "hf://buckets/$env:HF_BUCKET/test-upload.txt" "downloaded/test-upload.txt"
+          Write-Host "`nDownloaded file:"
           Get-Content "downloaded/test-upload.txt"
