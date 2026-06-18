@@ -16,6 +16,7 @@ jobs:
 
       - name: Setup hf CLI
         run: |
+          pip install huggingface_hub
           hf --version
           hf auth login --token "${{ secrets.HF_TOKEN }}"
 
