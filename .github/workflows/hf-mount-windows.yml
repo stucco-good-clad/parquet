@@ -35,7 +35,9 @@ jobs:
 
       - name: Download and verify
         run: |
+          $env:PYTHONIOENCODING = "utf-8"
+          [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
           New-Item -ItemType Directory -Force -Path "downloaded" | Out-Null
-          hf buckets cp "hf://buckets/$env:HF_BUCKET/test-upload.txt" "downloaded/test-upload.txt"
-          Write-Host "`nDownloaded file:"
+          hf buckets cp "hf://buckets/$env:HF_BUCKET/test-upload.txt" "downloaded/test-upload.txt" 2>&1 | Out-Null
+          Write-Host "Downloaded file:"
           Get-Content "downloaded/test-upload.txt"
