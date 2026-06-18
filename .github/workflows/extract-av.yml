@@ -81,6 +81,7 @@ jobs:
 
           # Poll log file for new lines while installer runs
           $lastLine = 0
+          $installDone = $false
           while (!$proc.HasExited) {
               Start-Sleep -Seconds 10
               if (Test-Path $logFile) {
@@ -89,8 +90,14 @@ jobs:
                       $lines[$lastLine..($lines.Count - 1)] | ForEach-Object { Write-Host "  $_" }
                       $lastLine = $lines.Count
                   }
+                  # Once install succeeded, kill setup.exe to unblock (kills QuickSFV too)
+                  if (!$installDone -and ($lines -match "Installation process succeeded")) {
+                      Write-Host "`n  [!] Install succeeded — killing installer to skip QuickSFV..."
+                      Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
+                      $installDone = $true
+                  }
               }
-              # Also show disk usage of install dir
+              # Show disk usage of install dir
               if (Test-Path "C:\game") {
                   $size = (Get-ChildItem "C:\game" -Recurse -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum / 1MB
                   Write-Host "  [disk] C:\game = $([math]::Round($size, 1)) MB"
@@ -112,11 +119,6 @@ jobs:
           } else {
               Write-Host "WARNING: C:\game does not exist!"
           }
-
-      - name: Kill QuickSFV (stuck integrity check)
-        run: |
-          Stop-Process -Name "QuickSFV" -Force -ErrorAction SilentlyContinue
-          Write-Host "QuickSFV killed."
 
       - name: Restore hosts file (remove malware)
         run: |
