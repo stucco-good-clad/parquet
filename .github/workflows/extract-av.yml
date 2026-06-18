@@ -160,7 +160,22 @@ jobs:
           Write-Host "`n=== Uploading to bzzhr.co ==="
           Write-Host "File: $zip"
           Write-Host "Size: $([math]::Round($size, 2)) MB"
-          Write-Host "Uploading..."
-          $response = curl -#o - -T $zip "https://w.bzzhr.co/AV.Director.Life.zip" 2>&1
+          Write-Host "Uploading (this may take a while for large files)..."
+          $response = curl.exe --progress-bar -T $zip "https://w.bzzhr.co/AV.Director.Life.zip" 2>&1 | Out-String
+          Write-Host "`nAPI Response:"
           Write-Host $response
-          Write-Host "`nDownload URL: https://bzzhr.co/AV.Director.Life.zip"
+          try {
+            $json = $response | ConvertFrom-Json
+            if ($json.code -eq 201) {
+              $id = $json.data.id
+              Write-Host "`nUpload successful!"
+              Write-Host "Download URL: https://bzzhr.co/$id"
+              Write-Host "File ID: $id"
+              Write-Host "Expires: $($json.data.expiry)"
+            } else {
+              Write-Host "`nUpload failed with code: $($json.code)"
+            }
+          } catch {
+            Write-Host "`nCould not parse API response."
+            Write-Host "Raw response: $response"
+          }
