@@ -1,4 +1,4 @@
-name: Install Game (Ubuntu + QEMU Windows)
+name: Install Game (Ubuntu + Wine-GE)
 
 on:
   workflow_dispatch:
@@ -11,12 +11,12 @@ jobs:
 
       - name: Install dependencies
         run: |
+          sudo dpkg --add-architecture i386
           sudo apt-get update -qq
           sudo apt-get install -y -qq \
-            qemu-system-x86 qemu-utils \
-            samba smbclient \
             unrar curl nfs-common \
-            genisoimage sshpass
+            wine64 wine32 winetricks \
+            xvfb x11-utils
 
       - name: Install hf-mount
         run: |
@@ -56,185 +56,73 @@ jobs:
           rm -rf /hf-drive/AV/parts
           ls -lh /hf-drive/AV/
 
-      - name: Check KVM support
+      - name: Install Wine-GE
         run: |
-          ls -la /dev/kvm
-          sudo chmod 666 /dev/kvm
-          echo "KVM ready"
+          # Download Wine-GE (latest non-lol version)
+          WINE_GE_URL="https://github.com/GloriousEggroll/wine-ge-custom/releases/download/GE-Proton8-26/Wine_GE_8.26-x86_64.tar.xz"
+          echo "Downloading Wine-GE..."
+          curl -L -o /tmp/wine-ge.tar.xz "$WINE_GE_URL"
+          mkdir -p ~/wine-ge
+          tar -xf /tmp/wine-ge.tar.xz -C ~/wine-ge --strip-components=1
+          rm /tmp/wine-ge.tar.xz
+          echo "Wine-GE installed:"
+          ~/wine-ge/bin/wine --version 2>/dev/null || echo "Version check failed"
 
-      - name: Create unattended Windows setup
+      - name: Create Wine prefix and install game
         run: |
-          mkdir -p /tmp/win-setup
+          export WINEPREFIX=/tmp/wineprefix
+          export WINEARCH=win64
+          export WINEDLLOVERRIDES="winemenubuilder.exe=d"
+          WINE=~/wine-ge/bin/wine
 
-          # Autounattend.xml - enables SSH, autologin, disables UAC
-          cat > /tmp/win-setup/Autounattend.xml << 'XMLEOF'
-<?xml version="1.0" encoding="utf-8"?>
-<unattend xmlns="urn:schemas-microsoft-com:unattend">
-  <settings pass="specialize">
-    <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64"
-      publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS"
-      xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State"
-      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-      <AutoLogon>
-        <Password><Value>Password123!</Value></Password>
-        <Enabled>true</Enabled>
-        <Username>Administrator</Username>
-      </AutoLogon>
-    </component>
-    <component name="Microsoft-Windows-ServerManager-SvrMgrNc" processorArchitecture="amd64"
-      publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS"
-      xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State"
-      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-      <DoNotOpenServerManagerAtLogon>true</DoNotOpenServerManagerAtLogon>
-    </component>
-  </settings>
-  <settings pass="oobeSystem">
-    <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64"
-      publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS"
-      xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State"
-      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-      <OOBE>
-        <HideEULAPage>true</HideEULAPage>
-        <ProtectYourPC>3</ProtectYourPC>
-        <NetworkLocation>Work</NetworkLocation>
-      </OOBE>
-      <AutoLogon>
-        <Password><Value>Password123!</Value></Password>
-        <Enabled>true</Enabled>
-        <Username>Administrator</Username>
-      </AutoLogon>
-    </component>
-  </settings>
-</unattend>
-XMLEOF
+          echo "=== Initializing Wine prefix ==="
+          WINEDEBUG=-all $WINE wineboot --init 2>&1 | tail -5
 
-          # Create PowerShell setup script
-          cat > /tmp/win-setup/setup.ps1 << 'PSEOF'
-# Run on first boot - enable SSH and mount network drive
-$ErrorActionPreference = "SilentlyContinue"
+          SETUP=$(find /hf-drive/AV/extracted -name "setup.exe" -type f 2>/dev/null | head -1)
+          echo "Setup found: $SETUP"
 
-# Enable OpenSSH Server
-Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0
-Set-Service -Name sshd -StartupType Automatic
-Start-Service sshd
-
-# Allow password auth
-$sshdConfig = "C:\ProgramData\ssh\sshd_config"
-(Get-Content $sshdConfig) -replace '#PasswordAuthentication yes', 'PasswordAuthentication yes' | Set-Content $sshdConfig
-Restart-Service sshd
-
-# Disable firewall for SMB
-Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled False
-
-# Mount the network drive (QEMU user-mode SMB)
-net use Z: \\10.0.2.4\hf-drive /user:Administrator "" /persistent:no
-
-# Create marker
-"SETUP_READY" | Out-File "C:\setup_ready.txt" -Encoding ASCII
-PSEOF
-
-          # Create ISO with Autounattend.xml and setup script
-          cd /tmp/win-setup
-          mkisofs -o /tmp/win-setup.iso -V CIDATA -r -J \
-            Autounattend.xml setup.ps1 2>/dev/null || \
-          genisoimage -output /tmp/win-setup.iso -volid CIDATA -joliet -rock \
-            Autounattend.xml setup.ps1
-
-          echo "Setup ISO created:"
-          ls -lh /tmp/win-setup.iso
-
-      - name: Download Windows Server image
-        run: |
-          # Windows Server 2022 Evaluation - pre-installed qcow2
-          # Source: https://www.microsoft.com/en-us/evalcenter/evaluate-windows-server-2022
-          IMAGE_URL="https://github.com/AdrianKoshka/windows-qemu-images/releases/download/2022.01/WS2022.qcow2"
-
-          echo "Downloading Windows Server 2022 image..."
-          if ! wget -q --show-progress -O /tmp/windows.qcow2 "$IMAGE_URL" 2>/dev/null; then
-            echo "Primary source failed, trying alternative..."
-            # Fallback: create from Ubuntu cloud image (won't work for Windows apps but tests the pipeline)
-            echo "ERROR: Could not download Windows image."
-            echo "Please provide a Windows Server qcow2 image at /tmp/windows.qcow2"
+          if [ -z "$SETUP" ]; then
+            echo "ERROR: setup.exe not found!"
+            ls -lhR /hf-drive/AV/extracted/
             exit 1
           fi
 
-          echo "Image downloaded:"
-          ls -lh /tmp/windows.qcow2
-
-      - name: Boot Windows VM
-        run: |
-          # Create a 200GB disk for game installation
-          qemu-img create -f qcow2 /tmp/game-disk.qcow2 200G
-
-          echo "Starting Windows Server VM..."
-          echo "  - 8GB RAM, 4 CPUs"
-          echo "  - SMB share: /hf-drive (bucket)"
-          echo "  - SSH: port 2222"
-          echo "  - Setup ISO: /tmp/win-setup.iso"
-
-          qemu-system-x86_64 \
-            -enable-kvm \
-            -m 8192 \
-            -smp 4 \
-            -cpu host \
-            -drive file=/tmp/windows.qcow2,format=qcow2,if=virtio \
-            -drive file=/tmp/game-disk.qcow2,format=qcow2,if=virtio \
-            -cdrom /tmp/win-setup.iso \
-            -netdev user,id=net0,hostfwd=tcp::2222-:22,smb=/hf-drive \
-            -device virtio-net-pci,netdev=net0 \
-            -nographic \
-            -serial mon:stdio &
-          VM_PID=$!
-          echo "VM PID: $VM_PID"
-
-          # Wait for Windows to boot and SSH to become available
-          echo "Waiting for Windows to boot and configure SSH..."
-          for i in $(seq 1 120); do
-            sleep 10
-            if ! kill -0 $VM_PID 2>/dev/null; then
-              echo "VM died!"
-              exit 1
-            fi
-            if nc -z 127.0.0.1 2222 2>/dev/null; then
-              echo "SSH available after $((i*10))s"
-              break
-            fi
-            echo "  [$((i*10))s] Waiting for SSH..."
-          done
-
-          # Verify SSH works
-          if nc -z 127.0.0.1 2222 2>/dev/null; then
-            echo "=== SSH is ready ==="
-            sshpass -p 'Password123!' ssh -o StrictHostKeyChecking=no -p 2222 Administrator@127.0.0.1 "hostname"
-          else
-            echo "SSH not available after 20 minutes"
-            exit 1
-          fi
-
-      - name: Run installer via SSH
-        run: |
-          SSH="sshpass -p 'Password123!' ssh -o StrictHostKeyChecking=no -p 2222 Administrator@127.0.0.1"
-
-          echo "=== Checking setup.exe ==="
-          $SSH "Get-ChildItem -Path 'Z:\AV\extracted' -Filter 'setup.exe' -Recurse | Select-Object FullName"
-
-          SETUP=$($SSH "Get-ChildItem -Path 'Z:\AV\extracted' -Filter 'setup.exe' -Recurse | Select-Object -First 1 -ExpandProperty FullName" 2>/dev/null | tr -d '\r')
-          echo "Setup: $SETUP"
+          # Create install dir
+          mkdir -p /hf-drive/AV/installed
 
           echo "=== Starting installer ==="
-          $SSH "Start-Process -FilePath '$SETUP' -ArgumentList '/SILENT','/DIR=Z:\AV\installed','/NORESTART','/CLOSEAPPLICATIONS','/FORCECLOSEAPPLICATIONS','/LOG=Z:\AV\install.log'"
+          echo "Setup: $SETUP"
+          echo "Install to: Z:\AV\installed"
 
-          echo "Installer launched. Monitoring..."
+          # Run installer with Wine-GE under Xvfb
+          xvfb-run -a -s "-screen 0 1024x768x24" \
+            $WINE "$SETUP" \
+            /DIR="Z:\\AV\\installed" \
+            /SILENT \
+            /NORESTART \
+            /CLOSEAPPLICATIONS \
+            /FORCECLOSEAPPLICATIONS \
+            /LOG="Z:\\AV\\install.log" \
+            2>&1 &
+          INSTALLER_PID=$!
+          echo "Installer PID: $INSTALLER_PID"
 
-          # Monitor for QuickSFV
+          echo "=== Monitoring ==="
           for i in $(seq 1 180); do
             sleep 10
 
-            # Check QuickSFV
-            if $SSH "Get-Process -Name 'QuickSFV' -ErrorAction SilentlyContinue" 2>/dev/null | grep -q "QuickSFV"; then
+            # Check for QuickSFV
+            if pgrep -f "QuickSFV" > /dev/null 2>&1; then
               echo "[!] QuickSFV detected — killing installer"
-              $SSH "Stop-Process -Name 'setup' -Force -ErrorAction SilentlyContinue"
-              $SSH "Stop-Process -Name 'QuickSFV' -Force -ErrorAction SilentlyContinue"
+              kill -9 $INSTALLER_PID 2>/dev/null
+              pkill -f "setup.exe" 2>/dev/null
+              pkill -f "QuickSFV" 2>/dev/null
+              break
+            fi
+
+            # Check installer exited
+            if ! kill -0 $INSTALLER_PID 2>/dev/null; then
+              echo "Installer exited."
               break
             fi
 
@@ -250,12 +138,7 @@ PSEOF
           done
 
           echo "=== Install step complete ==="
-          $SSH "Get-ChildItem -Path 'Z:\AV\installed' | Select-Object Name,Length" 2>/dev/null | head -20
-
-      - name: Stop VM
-        if: always()
-        run: |
-          pkill -f qemu-system 2>/dev/null || true
+          ls -lh /hf-drive/AV/installed/ 2>/dev/null | head -20
 
       - name: Zip installed game
         run: |
@@ -273,6 +156,6 @@ PSEOF
       - name: Cleanup
         if: always()
         run: |
-          pkill -f qemu-system 2>/dev/null || true
+          pkill -f wine 2>/dev/null || true
           pkill -f hf-mount-nfs 2>/dev/null || true
-          rm -f /tmp/win-setup.iso /tmp/game-disk.qcow2
+          rm -rf /tmp/wineprefix ~/wine-ge
