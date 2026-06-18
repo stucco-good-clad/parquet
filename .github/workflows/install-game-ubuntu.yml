@@ -12,7 +12,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq unrar p7zip-full aria2 curl
+          sudo apt-get install -y -qq unrar p7zip-full aria2 curl nfs-common
 
       - name: Install hf-mount
         run: |
