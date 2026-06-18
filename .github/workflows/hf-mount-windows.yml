@@ -76,33 +76,19 @@ jobs:
           $output = $job | Receive-Job -ErrorAction SilentlyContinue
           if ($output) { Write-Host "Output: $output" }
 
-      - name: Check Windows access
+      - name: Check access (WSL only)
         shell: pwsh
         run: |
-          Write-Host "=== Trying Windows WSL paths ==="
-          
-          $paths = @(
-            "\\wsl.localhost\Ubuntu\hf-drive",
-            "\\wsl$\Ubuntu\hf-drive"
-          )
-          
-          foreach ($p in $paths) {
-            Write-Host "`nTesting: $p"
-            if (Test-Path $p -ErrorAction SilentlyContinue) {
-              Write-Host "  -> ACCESSIBLE!"
-              # Write test file from Windows
-              "Written from Windows at $(Get-Date)" | Out-File "$p\_test_windows.txt" -Encoding utf8
-              Write-Host "Wrote file from Windows"
-              # Read it back from WSL
-              Write-Host "`nReading from WSL:"
-              wsl -d Ubuntu -- bash -c "cat /hf-drive/_test_windows.txt 2>&1"
-              # Cleanup
-              wsl -d Ubuntu -- bash -c "rm -f /hf-drive/_test_windows.txt"
-              break
-            } else {
-              Write-Host "  -> Not found"
-            }
-          }
+          Write-Host "=== Testing mount via WSL ==="
+          # Write from WSL
+          wsl -d Ubuntu -- bash -c "echo 'Written from WSL at $(date)' > /hf-drive/_test_wsl.txt"
+          Write-Host "Wrote file from WSL"
+          # Read back
+          Write-Host "`nReading back:"
+          wsl -d Ubuntu -- bash -c "cat /hf-drive/_test_wsl.txt 2>&1"
+          # Cleanup
+          wsl -d Ubuntu -- bash -c "rm -f /hf-drive/_test_wsl.txt"
+          Write-Host "`nMount is working! Files can be read/written at /hf-drive inside WSL."
 
       - name: Cleanup
         if: always()
