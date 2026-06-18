@@ -90,7 +90,7 @@ jobs:
             Write-Host "`nTesting: $p"
             if (Test-Path $p -ErrorAction SilentlyContinue) {
               Write-Host "  -> ACCESSIBLE!"
-              timeout 10 Get-ChildItem $p -Force -ErrorAction SilentlyContinue | Select-Object -First 5
+              Get-ChildItem $p -Force -ErrorAction SilentlyContinue | Select-Object -First 5
               break
             } else {
               Write-Host "  -> Not found"
@@ -103,4 +103,4 @@ jobs:
         run: |
           Write-Host "Stopping mount jobs..."
           Get-Job | Stop-Job -PassThru | Remove-Job -Force -ErrorAction SilentlyContinue
-          wsl --shutdown -ErrorAction SilentlyContinue
+          try { wsl --shutdown } catch {}
