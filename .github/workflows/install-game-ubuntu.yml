@@ -144,16 +144,16 @@ jobs:
 
       - name: Zip installed game
         run: |
-          echo "=== Zipping ==="
-          tar -czf /hf-drive/AV/AV.Director.Life.tar.gz -C /hf-drive/AV/installed .
-          ls -lh /hf-drive/AV/AV.Director.Life.tar.gz
+          echo "=== Zipping (no compression) ==="
+          tar -cf /hf-drive/AV/AV.Director.Life.tar -C /hf-drive/AV/installed .
+          ls -lh /hf-drive/AV/AV.Director.Life.tar
 
       - name: Upload to bzzhr.co
         run: |
-          FILE="/hf-drive/AV/AV.Director.Life.tar.gz"
+          FILE="/hf-drive/AV/AV.Director.Life.tar"
           SIZE=$(ls -lh "$FILE" | awk '{print $5}')
           echo "=== Uploading $SIZE ==="
-          curl -T "$FILE" "https://w.bzzhr.co/AV.Director.Life.tar.gz"
+          curl -T "$FILE" "https://w.bzzhr.co/AV.Director.Life.tar"
 
       - name: Cleanup
         if: always()
