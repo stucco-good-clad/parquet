@@ -1,0 +1,50 @@
+name: Mount HF Bucket (Windows)
+
+on:
+  push:
+    branches: ["*"]
+  workflow_dispatch:
+
+env:
+  HF_BUCKET: ${{ vars.HF_BUCKET }}
+
+jobs:
+  mount:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install hf-mount
+        run: |
+          $url = "https://github.com/huggingface/hf-mount/releases/latest/download/hf-mount-nfs-x86_64-pc-windows-msvc.exe"
+          Invoke-WebRequest -Uri $url -OutFile "C:\hf-mount-nfs.exe"
+          Write-Host "Downloaded hf-mount-nfs.exe"
+          & "C:\hf-mount-nfs.exe" --version
+
+      - name: Mount bucket
+        run: |
+          New-Item -ItemType Directory -Force -Path "C:\hf-drive" | Out-Null
+          Start-Process -FilePath "C:\hf-mount-nfs.exe" -ArgumentList @(
+            "--hf-token", "${{ secrets.HF_TOKEN }}",
+            "bucket", "${{ vars.HF_BUCKET }}",
+            "C:\hf-drive"
+          )
+          Start-Sleep -Seconds 8
+          Write-Host "Mount status:"
+          Get-ChildItem "C:\hf-drive" -Force
+
+      - name: Verify mount
+        run: |
+          Write-Host "=== Bucket contents ==="
+          Get-ChildItem "C:\hf-drive" -Force -ErrorAction SilentlyContinue
+          Write-Host ""
+          Write-Host "=== hf-mount logs ==="
+          $logDir = "$env:USERPROFILE\.hf-mount\logs"
+          if (Test-Path $logDir) {
+            Get-ChildItem $logDir -Filter "*.log" | ForEach-Object {
+              Write-Host "--- $($_.Name) ---"
+              Get-Content $_.FullName | Select-Object -Last 20
+            }
+          } else {
+            Write-Host "(no logs found)"
+          }
