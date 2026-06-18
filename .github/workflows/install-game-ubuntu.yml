@@ -70,12 +70,14 @@ jobs:
 
       - name: Create Wine prefix and install game
         run: |
-          export WINEPREFIX=/tmp/wineprefix
+          export HOME=/home/runner
+          export WINEPREFIX=$HOME/wineprefix
           export WINEARCH=win64
           export WINEDLLOVERRIDES="winemenubuilder.exe=d"
           WINE=~/wine-ge/bin/wine
 
           echo "=== Initializing Wine prefix ==="
+          mkdir -p $WINEPREFIX
           WINEDEBUG=-all $WINE wineboot --init 2>&1 | tail -5
 
           SETUP=$(find /hf-drive/AV/extracted -name "setup.exe" -type f 2>/dev/null | head -1)
@@ -158,4 +160,4 @@ jobs:
         run: |
           pkill -f wine 2>/dev/null || true
           pkill -f hf-mount-nfs 2>/dev/null || true
-          rm -rf /tmp/wineprefix ~/wine-ge
+          rm -rf ~/wineprefix ~/wine-ge
