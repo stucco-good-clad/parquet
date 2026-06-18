@@ -22,19 +22,20 @@ jobs:
 
       - name: Mount bucket
         run: |
-          mkdir -p /mnt/hf-bucket
+          sudo mkdir -p /hf-drive
+          sudo chown runner:runner /hf-drive
           hf-mount-nfs \
             --hf-token "${{ secrets.HF_TOKEN }}" \
             bucket "${{ vars.HF_BUCKET }}" \
-            /mnt/hf-bucket &
+            /hf-drive &
           sleep 5
           echo "Mount status:"
-          ls -la /mnt/hf-bucket/
+          ls -la /hf-drive/
 
       - name: Verify mount
         run: |
           echo "=== Bucket contents ==="
-          ls -la /mnt/hf-bucket/ || echo "(empty or mount failed)"
+          ls -la /hf-drive/ || echo "(empty or mount failed)"
           echo ""
-          echo "=== Disk usage ==="
-          df -h /mnt/hf-bucket
+          echo "=== hf-mount logs ==="
+          cat ~/.hf-mount/logs/*.log 2>/dev/null || echo "(no logs)"
