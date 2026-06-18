@@ -19,9 +19,6 @@ jobs:
       - name: Install WSL2 + Ubuntu
         shell: pwsh
         run: |
-          Write-Host "=== Current distros ==="
-          wsl -l -v 2>&1
-
           $distros = wsl -l -v 2>&1
           $hasUbuntu = $distros -match "Ubuntu"
           
@@ -39,61 +36,57 @@ jobs:
       - name: Setup hf-mount in Ubuntu
         shell: pwsh
         run: |
-          Write-Host "=== Installing deps ==="
           wsl -d Ubuntu -u root -- bash -c "apt-get update -qq && apt-get install -y -qq nfs-common curl 2>&1 | tail -3"
-          
-          Write-Host "`n=== Downloading hf-mount-nfs ==="
           wsl -d Ubuntu -- bash -c "curl -sL https://github.com/huggingface/hf-mount/releases/latest/download/hf-mount-nfs-x86_64-linux -o /usr/local/bin/hf-mount-nfs && chmod +x /usr/local/bin/hf-mount-nfs && hf-mount-nfs --version"
 
-      - name: Mount bucket
+      - name: Mount and test
         shell: pwsh
         run: |
-          wsl -d Ubuntu -u root -- bash -c "mkdir -p /hf-drive"
-          
           $token = "${{ secrets.HF_TOKEN }}"
           $bucket = "${{ vars.HF_BUCKET }}"
-          
-          Write-Host "Starting hf-mount for bucket: $bucket"
-          
-          # Start hf-mount in background via WSL
-          $job = Start-Job -ScriptBlock {
-            param($t, $b)
-            wsl -d Ubuntu -- bash -c "export PYTHONIOENCODING=utf-8; hf-mount-nfs --hf-token '$t' bucket '$b' /hf-drive 2>&1"
-          } -ArgumentList $token, $bucket
-          
-          # Wait for NFS server to start
-          Start-Sleep -Seconds 15
-          
-          # Quick check if mount point is usable (with timeout)
-          Write-Host "=== Testing mount with stat ==="
-          wsl -d Ubuntu -- bash -c "timeout 10 stat /hf-drive 2>&1"
-          
-          Write-Host "`n=== Testing with ls (timeout 30s) ==="
-          wsl -d Ubuntu -- bash -c "timeout 30 ls -la /hf-drive/ 2>&1" | Select-Object -First 10
-          
-          Write-Host "`n=== Job status ==="
-          Write-Host "State: $($job.State)"
-          $output = $job | Receive-Job -ErrorAction SilentlyContinue
-          if ($output) { Write-Host "Output: $output" }
 
-      - name: Check access (WSL only)
-        shell: pwsh
-        run: |
-          Write-Host "=== Testing mount via WSL ==="
-          # Write from WSL
-          wsl -d Ubuntu -- bash -c "echo 'Written from WSL at $(date)' > /hf-drive/_test_wsl.txt"
-          Write-Host "Wrote file from WSL"
-          # Read back
-          Write-Host "`nReading back:"
-          wsl -d Ubuntu -- bash -c "cat /hf-drive/_test_wsl.txt 2>&1"
-          # Cleanup
-          wsl -d Ubuntu -- bash -c "rm -f /hf-drive/_test_wsl.txt"
-          Write-Host "`nMount is working! Files can be read/written at /hf-drive inside WSL."
+          # Do everything in one WSL bash session: background mount, wait, test
+          $script = @"
+export PYTHONIOENCODING=utf-8
+mkdir -p /hf-drive
+
+echo 'Starting hf-mount...'
+nohup hf-mount-nfs --hf-token '$token' bucket '$bucket' /hf-drive > /tmp/hf-mount.log 2>&1 &
+MOUNT_PID=\$!
+echo "Mount PID: \$MOUNT_PID"
+
+echo 'Waiting 15s for mount...'
+sleep 15
+
+echo '=== Mount log ==='
+cat /tmp/hf-mount.log
+
+echo ''
+echo '=== Mount point ==='
+mount | grep hf-drive || echo 'NOT MOUNTED'
+
+echo ''
+echo '=== Trying to write test file ==='
+timeout 15 sh -c 'echo "test from wsl" > /hf-drive/_test.txt && echo "WRITE OK" || echo "WRITE FAILED"'
+
+echo ''
+echo '=== Trying to read test file ==='
+timeout 15 cat /hf-drive/_test.txt 2>&1 || echo "READ FAILED"
+
+echo ''
+echo '=== Cleanup ==='
+rm -f /hf-drive/_test.txt 2>/dev/null
+
+echo ''
+echo '=== Mount process still alive? ==='
+kill -0 \$MOUNT_PID 2>/dev/null && echo "YES - mount running" || echo "NO - mount dead"
+"@
+
+          wsl -d Ubuntu -- bash -c $script
 
       - name: Cleanup
         if: always()
         shell: pwsh
         run: |
-          Write-Host "Stopping mount jobs..."
-          Get-Job | Stop-Job -PassThru | Remove-Job -Force -ErrorAction SilentlyContinue
+          wsl -d Ubuntu -- bash -c "pkill -f hf-mount-nfs" 2>$null
           try { wsl --shutdown } catch {}
