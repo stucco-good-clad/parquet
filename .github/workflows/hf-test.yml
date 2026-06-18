@@ -1,0 +1,119 @@
+name: hf-test
+
+on:
+  workflow_dispatch:
+    inputs:
+      torrent_url:
+        description: "Direct download link to .torrent file"
+        required: true
+        type: string
+
+jobs:
+  download-and-upload:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download torrent file
+        run: |
+          curl -L -o torrent_file.torrent "${{ inputs.torrent_url }}"
+          echo "Torrent file downloaded:"
+          ls -lh torrent_file.torrent
+
+      - name: Extract torrent name
+        id: torrent_name
+        run: |
+          TORRENT_NAME=$(python3 -c "
+          def bdecode(data, offset=0):
+              if data[offset:offset+1] == b'd':
+                  offset += 1
+                  d = {}
+                  while data[offset:offset+1] != b'e':
+                      k, offset = bdecode(data, offset)
+                      v, offset = bdecode(data, offset)
+                      d[k] = v
+                  return d, offset + 1
+              elif data[offset:offset+1] == b'l':
+                  offset += 1
+                  l = []
+                  while data[offset:offset+1] != b'e':
+                      v, offset = bdecode(data, offset)
+                      l.append(v)
+                  return l, offset + 1
+              elif data[offset:offset+1] == b'i':
+                  end = data.index(b'e', offset)
+                  return int(data[offset+1:end]), end + 1
+              elif data[offset:offset+1] in b'0123456789':
+                  colon = data.index(b':', offset)
+                  length = int(data[offset:colon])
+                  start = colon + 1
+                  return data[start:start+length], start + length
+              else:
+                  raise ValueError(f'Unknown type at offset {offset}: {data[offset:offset+1]}')
+          with open('torrent_file.torrent', 'rb') as f:
+              raw = f.read()
+          torrent, _ = bdecode(raw)
+          info = torrent[b'info']
+          print(info.get(b'name', b'torrent_data').decode())
+          ")
+          echo "torrent_name=$TORRENT_NAME" >> "$GITHUB_OUTPUT"
+          echo "Torrent internal name: $TORRENT_NAME"
+
+      - name: Download files via aria2c
+        run: |
+          aria2c --seed-time=0 \
+                 --file-allocation=none \
+                 --bt-exclude-tracker="udp://*" \
+                 --console-log-level=notice \
+                 --summary-interval=10 \
+                 torrent_file.torrent
+
+      - name: List downloaded files
+        run: |
+          TORRENT_NAME="${{ steps.torrent_name.outputs.torrent_name }}"
+          echo "=== Downloaded files ==="
+          ls -la "$TORRENT_NAME/" | head -20
+          echo "..."
+          echo "Total files: $(find "$TORRENT_NAME/" -type f | wc -l)"
+          echo "Total size: $(du -sh "$TORRENT_NAME/" | cut -f1)"
+
+      - name: Zip downloaded files
+        run: |
+          TORRENT_NAME="${{ steps.torrent_name.outputs.torrent_name }}"
+          zip -r "${TORRENT_NAME}.zip" "$TORRENT_NAME/"
+          echo "Zipped file:"
+          ls -lh "${TORRENT_NAME}.zip"
+
+      - name: Upload to Buzzheavier
+        run: |
+          TORRENT_NAME="${{ steps.torrent_name.outputs.torrent_name }}"
+          ZIP_FILE="${TORRENT_NAME}.zip"
+          FILE_SIZE=$(stat -c%s "$ZIP_FILE")
+          echo "Uploading $ZIP_FILE ($FILE_SIZE bytes) to Buzzheavier..."
+
+          RESPONSE=$(curl -s -w "\n%{http_code}" \
+            -T "$ZIP_FILE" \
+            "https://w.buzzheavier.com/${ZIP_FILE}")
+
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | head -n -1)
+
+          echo "HTTP Status: $HTTP_CODE"
+          echo "Response: $BODY"
+
+          if [ "$HTTP_CODE" -ne 201 ]; then
+            echo "Upload failed!"
+            exit 1
+          fi
+
+          FILE_ID=$(echo "$BODY" | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
+          FILE_SHA=$(echo "$BODY" | python3 -c "import sys,json; print(json.load(sys.stdin)['sha256'])")
+
+          echo "upload_file_id=$FILE_ID" >> "$GITHUB_OUTPUT"
+          echo "upload_sha256=$FILE_SHA" >> "$GITHUB_OUTPUT"
+          echo ""
+          echo "=== Upload Complete ==="
+          echo "File ID: $FILE_ID"
+          echo "SHA-256: $FILE_SHA"
+          echo "Buzzheavier link: https://buzzheavier.com/f/${FILE_ID}"
+          echo "Direct download: https://w.buzzheavier.com/f/${FILE_ID}"
+        env:
+          BUZZHEAVIER_UPLOAD: true

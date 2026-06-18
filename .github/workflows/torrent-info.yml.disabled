@@ -1,0 +1,27 @@
+name: torrent-info
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  download-shard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show all torrent contents
+        run: aria2c --show-files aa_derived_mirror_metadata_20260208.torrent
+
+      - name: Download ES shard 0 (13 GiB)
+        run: |
+          aria2c --select-file=4 --dir=./data --summary-interval=1 --console-log-level=notice aa_derived_mirror_metadata_20260208.torrent
+
+      - name: Show downloaded files and sizes
+        run: |
+          echo "=== Downloaded files ==="
+          ls -lhR ./data/
+          echo ""
+          echo "=== Disk usage ==="
+          du -sh ./data/

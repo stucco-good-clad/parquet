@@ -1,0 +1,602 @@
+[
+  {
+    "rg": 0,
+    "minMd5": "00000087707ef28a46425994e50abad2",
+    "maxMd5": "03772fb297995959c098eb8f402b2086",
+    "file": "rg_00.parquet",
+    "size": 3076897,
+    "rows": 122880
+  },
+  {
+    "rg": 1,
+    "minMd5": "037730e208de4e8048bcf33b8ce01e58",
+    "maxMd5": "06eaa7ac01f4a7f2ffbb9746eacd58ad",
+    "file": "rg_01.parquet",
+    "size": 6160412,
+    "rows": 122880
+  },
+  {
+    "rg": 2,
+    "minMd5": "06eaa96e5c3df06064d2a81ac75d38d9",
+    "maxMd5": "0a5f1c8cc0c573b88f6f84feb5b0d952",
+    "file": "rg_02.parquet",
+    "size": 6159689,
+    "rows": 122880
+  },
+  {
+    "rg": 3,
+    "minMd5": "0a5f1d6a893c4e7443878cdfd84834d4",
+    "maxMd5": "0dd08d5b846de53e3fdc7c6e7a685933",
+    "file": "rg_03.parquet",
+    "size": 6154419,
+    "rows": 122880
+  },
+  {
+    "rg": 4,
+    "minMd5": "0dd08de502fdad29d9eeeb213b9b0df7",
+    "maxMd5": "113f062b357db5bcb4164c9f2821c3e2",
+    "file": "rg_04.parquet",
+    "size": 6156003,
+    "rows": 122880
+  },
+  {
+    "rg": 5,
+    "minMd5": "113f07fb0da2c8c86360aadfb8b90d96",
+    "maxMd5": "14b49c343351a9437d4f2b73f4dd3271",
+    "file": "rg_05.parquet",
+    "size": 6156793,
+    "rows": 122880
+  },
+  {
+    "rg": 6,
+    "minMd5": "14b49d1a63d9efb4d85e983cdc3d22e2",
+    "maxMd5": "182339ac480023dac42329960aee19f7",
+    "file": "rg_06.parquet",
+    "size": 6160897,
+    "rows": 122880
+  },
+  {
+    "rg": 7,
+    "minMd5": "18233b448432acbc83823010906086a6",
+    "maxMd5": "1b968bee735dfaea5665051857d6078f",
+    "file": "rg_07.parquet",
+    "size": 6159797,
+    "rows": 122880
+  },
+  {
+    "rg": 8,
+    "minMd5": "1b968d64e3c16bbe4fbf1435e009e1f4",
+    "maxMd5": "1f0c3d325e841931cf057ad93c51688f",
+    "file": "rg_08.parquet",
+    "size": 6159787,
+    "rows": 122880
+  },
+  {
+    "rg": 9,
+    "minMd5": "1f0c3d56b90f9c5fb78515102e70592c",
+    "maxMd5": "227e8140cac5025ea1a0a2ccda44449e",
+    "file": "rg_09.parquet",
+    "size": 6153910,
+    "rows": 122880
+  },
+  {
+    "rg": 10,
+    "minMd5": "227e8800f511628c5a700c2928934646",
+    "maxMd5": "25f55f13783ed3dfb310164f70490063",
+    "file": "rg_10.parquet",
+    "size": 6161193,
+    "rows": 122880
+  },
+  {
+    "rg": 11,
+    "minMd5": "25f55fa92a8f4dacc8c40a8133a35fa2",
+    "maxMd5": "296c2449551b30d223d9f11abec82f17",
+    "file": "rg_11.parquet",
+    "size": 6157475,
+    "rows": 122880
+  },
+  {
+    "rg": 12,
+    "minMd5": "296c249e5cab9df4a3bed470c646e7ce",
+    "maxMd5": "2ce249af0c5a6041019b1130f34981d9",
+    "file": "rg_12.parquet",
+    "size": 6161220,
+    "rows": 122880
+  },
+  {
+    "rg": 13,
+    "minMd5": "2ce249e9f3eca8324a6806ef3bcf133b",
+    "maxMd5": "3056c830e9431ef5dade77b9e0c5a365",
+    "file": "rg_13.parquet",
+    "size": 6159847,
+    "rows": 122880
+  },
+  {
+    "rg": 14,
+    "minMd5": "3056c854a7f3fac20a2bbdc0ce600b7b",
+    "maxMd5": "33cb641a62c6ff9d122557d1cbdd9ed1",
+    "file": "rg_14.parquet",
+    "size": 6167148,
+    "rows": 122880
+  },
+  {
+    "rg": 15,
+    "minMd5": "33cb669fff8bf3e664523f1ccde5ee57",
+    "maxMd5": "373e3fc3779e877a4cf19a58b1370d89",
+    "file": "rg_15.parquet",
+    "size": 6158740,
+    "rows": 122880
+  },
+  {
+    "rg": 16,
+    "minMd5": "373e4294e2aa00a58c03b00db5362fe4",
+    "maxMd5": "3ab0f3fb3527bf92f476ffa1b5d03ab4",
+    "file": "rg_16.parquet",
+    "size": 6160639,
+    "rows": 122880
+  },
+  {
+    "rg": 17,
+    "minMd5": "3ab0f58541a83870d03d9172057cf0f4",
+    "maxMd5": "3e22f0c137b0aff2f7ca416af106bb8a",
+    "file": "rg_17.parquet",
+    "size": 6156587,
+    "rows": 122880
+  },
+  {
+    "rg": 18,
+    "minMd5": "3e22f30a9142ee31444db707029d965f",
+    "maxMd5": "419a1482931d136b0f46e7a40c696423",
+    "file": "rg_18.parquet",
+    "size": 6156329,
+    "rows": 122880
+  },
+  {
+    "rg": 19,
+    "minMd5": "419a17dbfc5f4c3d85f87847308d04b8",
+    "maxMd5": "450dcbf445f3e3a332c8bf22ced59d31",
+    "file": "rg_19.parquet",
+    "size": 6166684,
+    "rows": 122880
+  },
+  {
+    "rg": 20,
+    "minMd5": "450dd329a56a138071dcea69af3a24d4",
+    "maxMd5": "487b15c2c360e5aa7ff720c8fc712266",
+    "file": "rg_20.parquet",
+    "size": 6158777,
+    "rows": 122880
+  },
+  {
+    "rg": 21,
+    "minMd5": "487b173b0c56d980b179eaf166856b6b",
+    "maxMd5": "4bee04c35d04e9d3d04ca99c082a1737",
+    "file": "rg_21.parquet",
+    "size": 6159068,
+    "rows": 122880
+  },
+  {
+    "rg": 22,
+    "minMd5": "4bee04eefb2b86c6b36040bdace60a27",
+    "maxMd5": "4f60a3257e27d3d7efb25acfdd3dab74",
+    "file": "rg_22.parquet",
+    "size": 6160618,
+    "rows": 122880
+  },
+  {
+    "rg": 23,
+    "minMd5": "4f60a438f00e6fb4db1279d8aea79860",
+    "maxMd5": "52d285a572e417c1eff7ad30fd003a08",
+    "file": "rg_23.parquet",
+    "size": 6155947,
+    "rows": 122880
+  },
+  {
+    "rg": 24,
+    "minMd5": "52d286b58ff498b90d68b93d58799ab0",
+    "maxMd5": "5646f81bda215df8a881ad5704f7cbb9",
+    "file": "rg_24.parquet",
+    "size": 6160142,
+    "rows": 122880
+  },
+  {
+    "rg": 25,
+    "minMd5": "5646fb6f4e4d77958dc68db99ad4b359",
+    "maxMd5": "59bc0199b79bbedca3cef7570a8f7b07",
+    "file": "rg_25.parquet",
+    "size": 6159943,
+    "rows": 122880
+  },
+  {
+    "rg": 26,
+    "minMd5": "59bc04b073faca2a16862be971c118a0",
+    "maxMd5": "5d32451735f306f763956633ab8aada5",
+    "file": "rg_26.parquet",
+    "size": 6161084,
+    "rows": 122880
+  },
+  {
+    "rg": 27,
+    "minMd5": "5d32485f682cf85168f6594a89278a8b",
+    "maxMd5": "60a6aa50130b1821ec3969c19f4b763d",
+    "file": "rg_27.parquet",
+    "size": 6155680,
+    "rows": 122880
+  },
+  {
+    "rg": 28,
+    "minMd5": "60a6aa745fea1d617081221b9f915e11",
+    "maxMd5": "6419d19b0b626992c1f5a3cd35a78bcb",
+    "file": "rg_28.parquet",
+    "size": 6153487,
+    "rows": 122880
+  },
+  {
+    "rg": 29,
+    "minMd5": "6419d437e482ba8e4c384aa824a9544d",
+    "maxMd5": "6792b1e29c0d840a5b21daf1e3705474",
+    "file": "rg_29.parquet",
+    "size": 6159772,
+    "rows": 122880
+  },
+  {
+    "rg": 30,
+    "minMd5": "6792b53568fdc590fa5ec6d9236a6b4e",
+    "maxMd5": "6b04f8b950bdb7d6614c4c8e17eadd31",
+    "file": "rg_30.parquet",
+    "size": 6161656,
+    "rows": 122880
+  },
+  {
+    "rg": 31,
+    "minMd5": "6b04f8ff3a8da3e6d6d95a1149d7c811",
+    "maxMd5": "6e7a2949a4f59b44d271bc8c85dbec2a",
+    "file": "rg_31.parquet",
+    "size": 6160049,
+    "rows": 122880
+  },
+  {
+    "rg": 32,
+    "minMd5": "6e7a297e9c0d4a2df880724765c2c4b9",
+    "maxMd5": "71eda42211e5a1ec7733ff4c84486c91",
+    "file": "rg_32.parquet",
+    "size": 6155487,
+    "rows": 122880
+  },
+  {
+    "rg": 33,
+    "minMd5": "71eda4445ae46e448e3ceee8607fbe5e",
+    "maxMd5": "7562240c960093f0ff5322f1599a8310",
+    "file": "rg_33.parquet",
+    "size": 6156387,
+    "rows": 122880
+  },
+  {
+    "rg": 34,
+    "minMd5": "756226ef1bbaf1f500ca52a63d405ecc",
+    "maxMd5": "78d7091e8892e380eaa55541b81e120f",
+    "file": "rg_34.parquet",
+    "size": 6162807,
+    "rows": 122880
+  },
+  {
+    "rg": 35,
+    "minMd5": "78d70922ba25bda10ada6852fdb429a2",
+    "maxMd5": "7c4e244aa11af1267144b5190817dac0",
+    "file": "rg_35.parquet",
+    "size": 6159058,
+    "rows": 122880
+  },
+  {
+    "rg": 36,
+    "minMd5": "7c4e25804382d96d13663d47f4e8e85a",
+    "maxMd5": "7fc277e7e91ced8b523d6409ca067454",
+    "file": "rg_36.parquet",
+    "size": 6161362,
+    "rows": 122880
+  },
+  {
+    "rg": 37,
+    "minMd5": "7fc279158901cc15d52737ec6167a15e",
+    "maxMd5": "83330fe05f751f469ad40c20f9d99537",
+    "file": "rg_37.parquet",
+    "size": 6151831,
+    "rows": 122880
+  },
+  {
+    "rg": 38,
+    "minMd5": "83331123a63864f06b04b20e8f314991",
+    "maxMd5": "86a7c98de9fce20b61c4c0bea6be22e3",
+    "file": "rg_38.parquet",
+    "size": 6162329,
+    "rows": 122880
+  },
+  {
+    "rg": 39,
+    "minMd5": "86a7cc3abc793e01da6c7406bc07473a",
+    "maxMd5": "8a1e753adacb5ef707c34998ef654cd5",
+    "file": "rg_39.parquet",
+    "size": 6160581,
+    "rows": 122880
+  },
+  {
+    "rg": 40,
+    "minMd5": "8a1e76894b772149834b3c1a96ecd395",
+    "maxMd5": "8d9158f47294ada28fdef2c6be961ae1",
+    "file": "rg_40.parquet",
+    "size": 6159309,
+    "rows": 122880
+  },
+  {
+    "rg": 41,
+    "minMd5": "8d9159e777d0a085bc09f186960e6673",
+    "maxMd5": "9104331e1f6fcc74bf21a67868aa1be0",
+    "file": "rg_41.parquet",
+    "size": 6162311,
+    "rows": 122880
+  },
+  {
+    "rg": 42,
+    "minMd5": "910433514295161b5cf159230eaf7797",
+    "maxMd5": "9474a07ea754f878a52573403cbecc74",
+    "file": "rg_42.parquet",
+    "size": 6160930,
+    "rows": 122880
+  },
+  {
+    "rg": 43,
+    "minMd5": "9474a132199212256ba32478633707aa",
+    "maxMd5": "97e6696efe039997746f0393cf744d5f",
+    "file": "rg_43.parquet",
+    "size": 6160904,
+    "rows": 122880
+  },
+  {
+    "rg": 44,
+    "minMd5": "97e67057dd5aa00b368b0a0bbaa07de3",
+    "maxMd5": "9b5bae4725396fdc965f4253cdfb111f",
+    "file": "rg_44.parquet",
+    "size": 6160937,
+    "rows": 122880
+  },
+  {
+    "rg": 45,
+    "minMd5": "9b5bb08eac8b95cf94812d1cc51a6491",
+    "maxMd5": "9ed0b3306df3cef3c3c22732c1ec1932",
+    "file": "rg_45.parquet",
+    "size": 6160995,
+    "rows": 122880
+  },
+  {
+    "rg": 46,
+    "minMd5": "9ed0b3dbcdbd15959e8ece004008a928",
+    "maxMd5": "a245227cb036a9bfe2b038c7ab0ee9db",
+    "file": "rg_46.parquet",
+    "size": 6154041,
+    "rows": 122880
+  },
+  {
+    "rg": 47,
+    "minMd5": "a24527a0c9ff7df576fdacb1bff89b6e",
+    "maxMd5": "a5b9a296fcdce0b2f9458e3ac3128409",
+    "file": "rg_47.parquet",
+    "size": 6159431,
+    "rows": 122880
+  },
+  {
+    "rg": 48,
+    "minMd5": "a5b9a42630c766907668c65a819a7540",
+    "maxMd5": "a92f571372d1b53fc1a3fde469f18b0b",
+    "file": "rg_48.parquet",
+    "size": 6159755,
+    "rows": 122880
+  },
+  {
+    "rg": 49,
+    "minMd5": "a92f5968925e7124e07a06d29d5adfe3",
+    "maxMd5": "aca7e70a58d67174e646cb2ea70bda4d",
+    "file": "rg_49.parquet",
+    "size": 6159243,
+    "rows": 122880
+  },
+  {
+    "rg": 50,
+    "minMd5": "aca7e85be62b77072d510ff7af3249ec",
+    "maxMd5": "b01c53d4c3f69331083f9e7257cde2da",
+    "file": "rg_50.parquet",
+    "size": 6161666,
+    "rows": 122880
+  },
+  {
+    "rg": 51,
+    "minMd5": "b01c55053fb36a9ccdea641f6a153267",
+    "maxMd5": "b393153f4ca626e802665cb6067ebedd",
+    "file": "rg_51.parquet",
+    "size": 6161581,
+    "rows": 122880
+  },
+  {
+    "rg": 52,
+    "minMd5": "b3931954eb12a3fa1bcccb42a99294ec",
+    "maxMd5": "b7077144917e756fac9cc265d804ba51",
+    "file": "rg_52.parquet",
+    "size": 6162167,
+    "rows": 122880
+  },
+  {
+    "rg": 53,
+    "minMd5": "b70771a0fc5c592bc4a089b483908ebf",
+    "maxMd5": "ba7aebd8ddded9c4d816514bcdba5997",
+    "file": "rg_53.parquet",
+    "size": 6158526,
+    "rows": 122880
+  },
+  {
+    "rg": 54,
+    "minMd5": "ba7aee934fa93a5d95e974a86c3270a5",
+    "maxMd5": "bdf23c09291e375422a7e91b275ae859",
+    "file": "rg_54.parquet",
+    "size": 6162143,
+    "rows": 122880
+  },
+  {
+    "rg": 55,
+    "minMd5": "bdf23f6b3b4516ada1478398a9ef361e",
+    "maxMd5": "c166b3c881c0d2f83d8f368493cd7952",
+    "file": "rg_55.parquet",
+    "size": 6154657,
+    "rows": 122880
+  },
+  {
+    "rg": 56,
+    "minMd5": "c166b3f643a82859ea77b991824e045b",
+    "maxMd5": "c4d7361bd21556d33c5def90185f07fc",
+    "file": "rg_56.parquet",
+    "size": 6161346,
+    "rows": 122880
+  },
+  {
+    "rg": 57,
+    "minMd5": "c4d736d16ebbfc806702e59b8c8a648a",
+    "maxMd5": "c84f21e29d9048cd4b9a2bff4119b0d3",
+    "file": "rg_57.parquet",
+    "size": 6160649,
+    "rows": 122880
+  },
+  {
+    "rg": 58,
+    "minMd5": "c84f23910bff3481761ff15d513f1a9d",
+    "maxMd5": "cbc44be47a64491a844c64d5d3dcdbf7",
+    "file": "rg_58.parquet",
+    "size": 6160697,
+    "rows": 122880
+  },
+  {
+    "rg": 59,
+    "minMd5": "cbc44e26d0653460f10d85b1fc172fbd",
+    "maxMd5": "cf36b8973522e624d67824421135a557",
+    "file": "rg_59.parquet",
+    "size": 6161133,
+    "rows": 122880
+  },
+  {
+    "rg": 60,
+    "minMd5": "cf36bb715f97e0d65cbcac2126f22ea9",
+    "maxMd5": "d2ad4e004231dcb871854091c92192e7",
+    "file": "rg_60.parquet",
+    "size": 6155498,
+    "rows": 122880
+  },
+  {
+    "rg": 61,
+    "minMd5": "d2ad51eca049bcfe38b6a18c07d7e97e",
+    "maxMd5": "d61f1ade9fe6879b99b2ed50e41b0819",
+    "file": "rg_61.parquet",
+    "size": 6160485,
+    "rows": 122880
+  },
+  {
+    "rg": 62,
+    "minMd5": "d61f1b2370dcdf85618e6e56338c121f",
+    "maxMd5": "d992cb5e72723ce6c1200ada3b37b8e1",
+    "file": "rg_62.parquet",
+    "size": 6158547,
+    "rows": 122880
+  },
+  {
+    "rg": 63,
+    "minMd5": "d992ce94a041adedd6e6ab0c2b96dc8c",
+    "maxMd5": "dd074bb3c0711275977d8641376cd7f5",
+    "file": "rg_63.parquet",
+    "size": 6160299,
+    "rows": 122880
+  },
+  {
+    "rg": 64,
+    "minMd5": "dd07510826bfc54bbad257d548b77bf9",
+    "maxMd5": "e0818ded906d12293311e09a68f4013e",
+    "file": "rg_64.parquet",
+    "size": 6155420,
+    "rows": 122880
+  },
+  {
+    "rg": 65,
+    "minMd5": "e08192b04b0de5a9cefd09cf04fda7df",
+    "maxMd5": "e3f493c696ecb2a506d4d4331eb5e00d",
+    "file": "rg_65.parquet",
+    "size": 6153471,
+    "rows": 122880
+  },
+  {
+    "rg": 66,
+    "minMd5": "e3f4997706d3842f20ba0c75b1cad02e",
+    "maxMd5": "e76697bc7e1da93c1e35a1e500d63a5f",
+    "file": "rg_66.parquet",
+    "size": 6159579,
+    "rows": 122880
+  },
+  {
+    "rg": 67,
+    "minMd5": "e7669b0e9919ca0d7d77673b2c5512b7",
+    "maxMd5": "ead736abfd9663c9754a692cf33fbfd5",
+    "file": "rg_67.parquet",
+    "size": 6159159,
+    "rows": 122880
+  },
+  {
+    "rg": 68,
+    "minMd5": "ead739436ce66e5abb22ed0d5fab68eb",
+    "maxMd5": "ee4cd9a9d76fd2679dace3cd46135638",
+    "file": "rg_68.parquet",
+    "size": 6159581,
+    "rows": 122880
+  },
+  {
+    "rg": 69,
+    "minMd5": "ee4cda167b07d0134297fcd4b739916b",
+    "maxMd5": "f1c345e30476391596f6e4de01ef879f",
+    "file": "rg_69.parquet",
+    "size": 6154445,
+    "rows": 122880
+  },
+  {
+    "rg": 70,
+    "minMd5": "f1c346c6f80bace61f514e1723fe0614",
+    "maxMd5": "f535414726452dd01446ec7904f5b53a",
+    "file": "rg_70.parquet",
+    "size": 6160103,
+    "rows": 122880
+  },
+  {
+    "rg": 71,
+    "minMd5": "f53541ea85d33d385351822f27c96b3c",
+    "maxMd5": "f8aa6805838379836f0cfc831d345a7b",
+    "file": "rg_71.parquet",
+    "size": 6160381,
+    "rows": 122880
+  },
+  {
+    "rg": 72,
+    "minMd5": "f8aa681592e186990c7db0d6c28df569",
+    "maxMd5": "fc1d159e97cbd95091cf3ff1b64d0e35",
+    "file": "rg_72.parquet",
+    "size": 6160814,
+    "rows": 122880
+  },
+  {
+    "rg": 73,
+    "minMd5": "fc1d179eb4a40ea6053216d6044c593c",
+    "maxMd5": "ff95a851416772ff2a78913f046f03e8",
+    "file": "rg_73.parquet",
+    "size": 6162864,
+    "rows": 122880
+  },
+  {
+    "rg": 74,
+    "minMd5": "ff95aa11d46d5279ddd5bdb522b68a8c",
+    "maxMd5": "fffffd567bf4f0f045e672e60b94962e",
+    "file": "rg_74.parquet",
+    "size": 3811549,
+    "rows": 14618
+  }
+]
