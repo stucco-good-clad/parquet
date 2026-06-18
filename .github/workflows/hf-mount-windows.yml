@@ -44,45 +44,21 @@ jobs:
         run: |
           $token = "${{ secrets.HF_TOKEN }}"
           $bucket = "${{ vars.HF_BUCKET }}"
-
-          # Do everything in one WSL bash session: background mount, wait, test
-          $script = @"
-export PYTHONIOENCODING=utf-8
-mkdir -p /hf-drive
-
-echo 'Starting hf-mount...'
-nohup hf-mount-nfs --hf-token '$token' bucket '$bucket' /hf-drive > /tmp/hf-mount.log 2>&1 &
-MOUNT_PID=\$!
-echo "Mount PID: \$MOUNT_PID"
-
-echo 'Waiting 15s for mount...'
-sleep 15
-
-echo '=== Mount log ==='
-cat /tmp/hf-mount.log
-
-echo ''
-echo '=== Mount point ==='
-mount | grep hf-drive || echo 'NOT MOUNTED'
-
-echo ''
-echo '=== Trying to write test file ==='
-timeout 15 sh -c 'echo "test from wsl" > /hf-drive/_test.txt && echo "WRITE OK" || echo "WRITE FAILED"'
-
-echo ''
-echo '=== Trying to read test file ==='
-timeout 15 cat /hf-drive/_test.txt 2>&1 || echo "READ FAILED"
-
-echo ''
-echo '=== Cleanup ==='
-rm -f /hf-drive/_test.txt 2>/dev/null
-
-echo ''
-echo '=== Mount process still alive? ==='
-kill -0 \$MOUNT_PID 2>/dev/null && echo "YES - mount running" || echo "NO - mount dead"
-"@
-
-          wsl -d Ubuntu -- bash -c $script
+          $bashScript = 'export PYTHONIOENCODING=utf-8' + "`n"
+          $bashScript += 'mkdir -p /hf-drive' + "`n"
+          $bashScript += 'echo Starting hf-mount...' + "`n"
+          $bashScript += "nohup hf-mount-nfs --hf-token '$token' bucket '$bucket' /hf-drive > /tmp/hf-mount.log 2>&1 &" + "`n"
+          $bashScript += 'MOUNT_PID=$!' + "`n"
+          $bashScript += 'echo Mount PID: $MOUNT_PID' + "`n"
+          $bashScript += 'sleep 15' + "`n"
+          $bashScript += 'cat /tmp/hf-mount.log' + "`n"
+          $bashScript += 'mount | grep hf-drive || echo NOT MOUNTED' + "`n"
+          $bashScript += 'timeout 15 sh -c "echo test > /hf-drive/_test.txt && echo WRITE_OK || echo WRITE_FAILED"' + "`n"
+          $bashScript += 'timeout 15 cat /hf-drive/_test.txt 2>&1 || echo READ_FAILED' + "`n"
+          $bashScript += 'rm -f /hf-drive/_test.txt 2>/dev/null' + "`n"
+          $bashScript += 'kill -0 $MOUNT_PID 2>/dev/null && echo MOUNT_ALIVE || echo MOUNT_DEAD' + "`n"
+          
+          wsl -d Ubuntu -- bash -c $bashScript
 
       - name: Cleanup
         if: always()
