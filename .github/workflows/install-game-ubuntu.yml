@@ -94,17 +94,17 @@ jobs:
 
           echo "=== Starting installer ==="
           echo "Setup: $SETUP"
-          echo "Install to: Z:\AV\installed"
+          echo "Install to: Z:\hf-drive\AV\installed"
 
           # Run installer with Wine-GE under Xvfb
           xvfb-run -a -s "-screen 0 1024x768x24" \
             $WINE "$SETUP" \
-            /DIR="Z:\\AV\\installed" \
+            /DIR="Z:\\hf-drive\\AV\\installed" \
             /SILENT \
             /NORESTART \
             /CLOSEAPPLICATIONS \
             /FORCECLOSEAPPLICATIONS \
-            /LOG="Z:\\AV\\install.log" \
+            /LOG="Z:\\hf-drive\\AV\\install.log" \
             2>&1 &
           INSTALLER_PID=$!
           echo "Installer PID: $INSTALLER_PID"
