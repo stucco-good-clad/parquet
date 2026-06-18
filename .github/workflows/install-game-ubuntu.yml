@@ -32,18 +32,26 @@ jobs:
           echo "Mount status:"
           ls -la /hf-drive/
 
-      - name: Download parts to bucket
+      - name: Download parts to local disk
         run: |
           BASE="https://github.com/stucco-good-clad/parquet/releases/download/av"
-          mkdir -p /hf-drive/AV/parts
-          echo "Downloading RAR parts sequentially..."
-          aria2c -x 16 -s 16 -j 1 --file-allocation=none -d /hf-drive/AV/parts \
+          mkdir -p /tmp/parts
+          echo "Downloading RAR parts (parallel, to local disk)..."
+          aria2c -x 16 -s 16 -j 5 -d /tmp/parts \
             "$BASE/AV.part1.rar" \
             "$BASE/AV.part2.rar" \
             "$BASE/AV.part3.rar" \
             "$BASE/AV.part4.rar" \
             "$BASE/AV.part5.rar"
           echo "=== Downloaded ==="
+          ls -lh /tmp/parts/
+
+      - name: Copy parts to bucket
+        run: |
+          mkdir -p /hf-drive/AV/parts
+          cp /tmp/parts/*.rar /hf-drive/AV/parts/
+          rm -rf /tmp/parts
+          echo "=== Parts in bucket ==="
           ls -lh /hf-drive/AV/parts/
 
       - name: Merge parts
