@@ -59,7 +59,7 @@ jobs:
       - name: Install Wine-GE
         run: |
           # Download Wine-GE (latest non-lol version)
-          WINE_GE_URL="https://github.com/GloriousEggroll/wine-ge-custom/releases/download/GE-Proton8-26/Wine_GE_8.26-x86_64.tar.xz"
+          WINE_GE_URL="https://github.com/GloriousEggroll/wine-ge-custom/releases/download/GE-Proton8-26/wine-lutris-GE-Proton8-26-x86_64.tar.xz"
           echo "Downloading Wine-GE..."
           curl -L -o /tmp/wine-ge.tar.xz "$WINE_GE_URL"
           mkdir -p ~/wine-ge
