@@ -44,24 +44,17 @@ jobs:
           echo "=== Downloaded ==="
           ls -lh /hf-drive/AV/parts/
 
-      - name: Merge parts
-        run: |
-          echo "Merging parts..."
-          cat /hf-drive/AV/parts/AV.part{1,2,3,4,5}.rar > /hf-drive/AV/merged.rar
-          ls -lh /hf-drive/AV/merged.rar
-
       - name: Extract
         run: |
-          echo "Extracting..."
-          unrar x -o+ /hf-drive/AV/merged.rar /hf-drive/AV/extracted/
+          echo "Extracting from parts..."
+          unrar x -o+ /hf-drive/AV/parts/AV.part1.rar /hf-drive/AV/extracted/
           echo "=== Extracted ==="
           ls -lh /hf-drive/AV/extracted/
 
-      - name: Delete parts and merged zip
+      - name: Delete parts
         run: |
-          echo "Deleting parts and merged file..."
+          echo "Deleting parts..."
           rm -rf /hf-drive/AV/parts
-          rm -f /hf-drive/AV/merged.rar
           echo "=== Remaining ==="
           ls -lh /hf-drive/AV/
 
