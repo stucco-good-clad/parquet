@@ -17,20 +17,23 @@ jobs:
       - name: Install WSL2 + Ubuntu
         shell: pwsh
         run: |
-          # Check if WSL is already available
-          $wsl = Get-Command wsl.exe -ErrorAction SilentlyContinue
-          if (-not $wsl) {
-            Write-Host "Installing WSL2..."
-            wsl --install --no-launch
-            Start-Sleep -Seconds 15
+          Write-Host "=== Current distros ==="
+          wsl -l -v 2>&1
+
+          # Check if Ubuntu is already installed
+          $distros = wsl -l -v 2>&1
+          $hasUbuntu = $distros -match "Ubuntu"
+          
+          if (-not $hasUbuntu) {
+            Write-Host "Installing Ubuntu..."
+            wsl --install -d Ubuntu --no-launch
+            Start-Sleep -Seconds 30
             wsl --shutdown
-            Start-Sleep -Seconds 3
+            Start-Sleep -Seconds 5
           }
+
           Write-Host "=== Installed distros ==="
-          wsl -l -v
-          Write-Host ""
-          Write-Host "=== WSL version ==="
-          wsl --version
+          wsl -l -v 2>&1
 
       - name: Setup hf-mount in Ubuntu
         shell: pwsh
