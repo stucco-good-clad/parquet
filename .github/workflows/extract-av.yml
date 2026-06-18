@@ -113,6 +113,11 @@ jobs:
               Write-Host "WARNING: C:\game does not exist!"
           }
 
+      - name: Kill QuickSFV (stuck integrity check)
+        run: |
+          Stop-Process -Name "QuickSFV" -Force -ErrorAction SilentlyContinue
+          Write-Host "QuickSFV killed."
+
       - name: Restore hosts file (remove malware)
         run: |
           $hosts = "$env:SystemRoot\System32\drivers\etc\hosts"
