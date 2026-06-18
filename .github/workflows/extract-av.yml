@@ -80,8 +80,9 @@ jobs:
           Write-Host "Monitoring install log...`n"
 
           # Poll log file for new lines while installer runs
+          # Sequence: files copied -> "succeeded" -> ISDone decompresses (~8min) -> QuickSFV hangs
           $lastLine = 0
-          $installDone = $false
+          $qsfvKilled = $false
           while (!$proc.HasExited) {
               Start-Sleep -Seconds 10
               if (Test-Path $logFile) {
@@ -90,12 +91,13 @@ jobs:
                       $lines[$lastLine..($lines.Count - 1)] | ForEach-Object { Write-Host "  $_" }
                       $lastLine = $lines.Count
                   }
-                  # Once install succeeded, kill setup.exe to unblock (kills QuickSFV too)
-                  if (!$installDone -and ($lines -match "Installation process succeeded")) {
-                      Write-Host "`n  [!] Install succeeded — killing installer to skip QuickSFV..."
-                      Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
-                      $installDone = $true
-                  }
+              }
+              # Kill QuickSFV when it spawns (decompression is done by then)
+              $qsfv = Get-Process -Name "QuickSFV" -ErrorAction SilentlyContinue
+              if ($qsfv -and !$qsfvKilled) {
+                  Write-Host "`n  [!] QuickSFV appeared (decompression done) — killing to unblock..."
+                  Stop-Process -Name "QuickSFV" -Force -ErrorAction SilentlyContinue
+                  $qsfvKilled = $true
               }
               # Show disk usage of install dir
               if (Test-Path "C:\game") {
@@ -145,9 +147,11 @@ jobs:
       - name: Zip installed content
         run: |
           Write-Host "`n=== Zipping installed content ==="
-          Compress-Archive -Path "C:\game\*" -DestinationPath "$env:TEMP\game.zip" -Force
-          $size = (Get-Item "$env:TEMP\game.zip").Length / 1MB
-          Write-Host "Zipped: $([math]::Round($size, 2)) MB -> $env:TEMP\game.zip"
+          $zip = "$env:TEMP\game.zip"
+          # Use tar (fast) instead of Compress-Archive (slow)
+          tar -cf $zip --format=zip -C C:\game .
+          $size = (Get-Item $zip).Length / 1MB
+          Write-Host "Zipped: $([math]::Round($size, 2)) MB -> $zip"
 
       - name: Upload to bzzhr.co
         run: |
