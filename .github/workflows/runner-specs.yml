@@ -34,7 +34,8 @@ jobs:
           Write-Host "=== Temp Drive ==="
           $temp = $env:TEMP
           Write-Host "TEMP path: $temp"
-          Write-Host "TEMP drive free: $([math]::Round((Get-PSDrive ($temp.Substring(0,1)).Free)/1GB, 2)) GB"
+          $drive = (Get-Item $temp).PSDrive
+          Write-Host "TEMP drive free: $([math]::Round($drive.Free/1GB, 2)) GB"
 
           Write-Host "`n=== Environment ==="
           Write-Host "OS: $env:OS"
