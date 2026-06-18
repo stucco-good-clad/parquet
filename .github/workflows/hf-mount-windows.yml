@@ -90,8 +90,12 @@ jobs:
             Write-Host "`nTesting: $p"
             if (Test-Path $p -ErrorAction SilentlyContinue) {
               Write-Host "  -> ACCESSIBLE!"
-              # Use WSL ls with timeout instead of slow PowerShell Get-ChildItem
-              wsl -d Ubuntu -- bash -c "timeout 30 ls -1 /hf-drive/ 2>&1" | Select-Object -First 10
+              # Write a test file via WSL
+              wsl -d Ubuntu -- bash -c "echo 'GitHub Actions test' > /hf-drive/_test_mount.txt"
+              # Read it back from Windows
+              Get-Content "$p\_test_mount.txt" -ErrorAction SilentlyContinue
+              # Cleanup
+              wsl -d Ubuntu -- bash -c "rm -f /hf-drive/_test_mount.txt"
               break
             } else {
               Write-Host "  -> Not found"
