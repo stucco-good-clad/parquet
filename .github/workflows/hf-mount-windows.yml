@@ -14,37 +14,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install hf-mount
-        run: |
-          $url = "https://github.com/huggingface/hf-mount/releases/latest/download/hf-mount-nfs-x86_64-pc-windows-msvc.exe"
-          Invoke-WebRequest -Uri $url -OutFile "C:\hf-mount-nfs.exe"
-          Write-Host "Downloaded hf-mount-nfs.exe"
-          & "C:\hf-mount-nfs.exe" --version
+      - name: Install huggingface_hub
+        run: pip install huggingface_hub
 
-      - name: Mount bucket
+      - name: List bucket contents
         run: |
-          New-Item -ItemType Directory -Force -Path "C:\hf-drive" | Out-Null
-          Start-Process -FilePath "C:\hf-mount-nfs.exe" -ArgumentList @(
-            "--hf-token", "${{ secrets.HF_TOKEN }}",
-            "bucket", "${{ vars.HF_BUCKET }}",
-            "C:\hf-drive"
-          )
-          Start-Sleep -Seconds 8
-          Write-Host "Mount status:"
-          Get-ChildItem "C:\hf-drive" -Force
+          $env:HF_TOKEN = "${{ secrets.HF_TOKEN }}"
+          huggingface-cli whoami
+          Write-Host "`n=== Bucket: $env:HF_BUCKET ==="
+          huggingface-cli buckets list $env:HF_BUCKET
 
-      - name: Verify mount
+      - name: Create test file and upload
         run: |
-          Write-Host "=== Bucket contents ==="
-          Get-ChildItem "C:\hf-drive" -Force -ErrorAction SilentlyContinue
-          Write-Host ""
-          Write-Host "=== hf-mount logs ==="
-          $logDir = "$env:USERPROFILE\.hf-mount\logs"
-          if (Test-Path $logDir) {
-            Get-ChildItem $logDir -Filter "*.log" | ForEach-Object {
-              Write-Host "--- $($_.Name) ---"
-              Get-Content $_.FullName | Select-Object -Last 20
-            }
-          } else {
-            Write-Host "(no logs found)"
-          }
+          $env:HF_TOKEN = "${{ secrets.HF_TOKEN }}"
+          "Hello from GitHub Actions $(Get-Date)" | Out-File -FilePath "test-upload.txt" -Encoding utf8
+          Write-Host "Uploading test file to bucket..."
+          huggingface-cli buckets cp test-upload.txt "hf://buckets/$env:HF_BUCKET/test-upload.txt"
+          Write-Host "`n=== Bucket contents after upload ==="
+          huggingface-cli buckets list $env:HF_BUCKET
+
+      - name: Download and verify
+        run: |
+          $env:HF_TOKEN = "${{ secrets.HF_TOKEN }}"
+          New-Item -ItemType Directory -Force -Path "downloaded" | Out-Null
+          huggingface-cli buckets cp "hf://buckets/$env:HF_BUCKET/test-upload.txt" "downloaded/test-upload.txt"
+          Write-Host "`nDownloaded file content:"
+          Get-Content "downloaded/test-upload.txt"
