@@ -1,4 +1,4 @@
-name: Extract AV
+name: Install AV
 
 on:
   push:
@@ -6,41 +6,87 @@ on:
   workflow_dispatch:
 
 jobs:
-  extract:
-    runs-on: ubuntu-latest
+  install-and-upload:
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
 
       - name: Install tools
-        run: sudo apt-get update && sudo apt-get install -y unrar aria2 tree
+        run: choco install aria2 unrar -y
 
       - name: Download RAR parts (parallel)
         run: |
-          mkdir -p download
-          aria2c -x 16 -s 16 -j 5 -d download -o "AV.part1.rar" \
-            "https://github.com/stucco-good-clad/parquet/releases/download/av/AV.part1.rar" &
-          aria2c -x 16 -s 16 -j 5 -d download -o "AV.part2.rar" \
-            "https://github.com/stucco-good-clad/parquet/releases/download/av/AV.part2.rar" &
-          aria2c -x 16 -s 16 -j 5 -d download -o "AV.part3.rar" \
-            "https://github.com/stucco-good-clad/parquet/releases/download/av/AV.part3.rar" &
-          aria2c -x 16 -s 16 -j 5 -d download -o "AV.part4.rar" \
-            "https://github.com/stucco-good-clad/parquet/releases/download/av/AV.part4.rar" &
-          aria2c -x 16 -s 16 -j 5 -d download -o "AV.part5.rar" \
-            "https://github.com/stucco-good-clad/parquet/releases/download/av/AV.part5.rar" &
-          wait
-          echo "All parts downloaded."
-          ls -lh download/
+          $dl = "$env:TEMP\dl"
+          New-Item -ItemType Directory -Force -Path $dl | Out-Null
+          $base = "https://github.com/stucco-good-clad/parquet/releases/download/av"
+          $jobs = @()
+          1..5 | ForEach-Object {
+            $i = $_
+            $jobs += Start-Job -ScriptBlock {
+              param($i, $base, $dl)
+              & aria2c -x 16 -s 16 -j 5 -d $dl -o "AV.part${i}.rar" "$base/AV.part${i}.rar" 2>&1
+            } -ArgumentList $i, $base, $dl
+          }
+          $jobs | Wait-Job | Receive-Job
+          $jobs | Remove-Job -Force
+          Write-Host "All parts downloaded."
+          Get-ChildItem $dl | Format-Table Name, Length -AutoSize
 
-      - name: Extract and merge
+      - name: Extract RAR parts
         run: |
-          mkdir -p extracted
-          unrar x -o+ download/AV.part1.rar extracted/
+          $dl = "$env:TEMP\dl"
+          $extracted = "$env:TEMP\extracted"
+          New-Item -ItemType Directory -Force -Path $extracted | Out-Null
+          unrar x -o+ "$dl\AV.part1.rar" "$extracted\"
 
-      - name: Show tree
-        run: tree -a extracted/
+      - name: Backup hosts file
+        run: |
+          $hosts = "$env:SystemRoot\System32\drivers\etc\hosts"
+          Copy-Item $hosts "$hosts.bak" -Force
+          Write-Host "Hosts file backed up."
 
-      - name: Upload setup.exe
-        uses: actions/upload-artifact@v4
-        with:
-          name: setup
-          path: extracted/setup.exe
+      - name: Install game (silent)
+        run: |
+          $extracted = "$env:TEMP\extracted"
+          Start-Process -Wait -FilePath "$extracted\setup.exe" -ArgumentList @(
+            "/VERYSILENT",
+            "/DIR=C:\game",
+            "/NORESTART",
+            "/SUPPRESSMSGBOXES",
+            "/CLOSEAPPLICATIONS",
+            "/FORCECLOSEAPPLICATIONS"
+          )
+          Write-Host "Install completed."
+
+      - name: Restore hosts file (remove malware)
+        run: |
+          $hosts = "$env:SystemRoot\System32\drivers\etc\hosts"
+          $bak = "$hosts.bak"
+          if (Test-Path $bak) {
+            Copy-Item $bak $hosts -Force
+            Remove-Item $bak -Force
+            Write-Host "Hosts file restored."
+          }
+
+      - name: Show installed content
+        run: |
+          if (Get-Command tree -ErrorAction SilentlyContinue) {
+            tree C:\game /A
+          } else {
+            Get-ChildItem C:\game -Recurse | Select-Object FullName
+          }
+
+      - name: Zip installed content
+        run: |
+          Compress-Archive -Path "C:\game\*" -DestinationPath "$env:TEMP\game.zip" -Force
+          $size = (Get-Item "$env:TEMP\game.zip").Length / 1MB
+          Write-Host "Zipped: $([math]::Round($size, 2)) MB"
+
+      - name: Upload to bzzhr.co
+        run: |
+          $zip = "$env:TEMP\game.zip"
+          $size = (Get-Item $zip).Length / 1MB
+          Write-Host "Uploading $([math]::Round($size, 2)) MB to bzzhr.co..."
+          $response = curl -#o - -T $zip "https://w.bzzhr.co/AV.Director.Life.zip" 2>&1
+          Write-Host $response
+          Write-Host "`nDownload URL: https://bzzhr.co/AV.Director.Life.zip"
