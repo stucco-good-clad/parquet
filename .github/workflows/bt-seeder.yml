@@ -15,6 +15,35 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Check and open firewall
+        run: |
+          echo "=== Checking ufw status ==="
+          sudo ufw status || echo "ufw not found"
+          echo ""
+          echo "=== Checking iptables ==="
+          sudo iptables -L -n 2>/dev/null | head -30 || echo "no iptables access"
+          echo ""
+          echo "=== Checking listening ports ==="
+          sudo ss -tlnp 2>/dev/null || netstat -tlnp 2>/dev/null || echo "no ss/netstat"
+          echo ""
+          echo "=== Trying to allow port 6881 ==="
+          sudo ufw allow 6881/tcp 2>/dev/null || echo "ufw allow failed"
+          sudo iptables -I INPUT -p tcp --dport 6881 -j ACCEPT 2>/dev/null || echo "iptables failed"
+          echo ""
+          echo "=== Checking what ports ARE reachable from outside ==="
+          echo "Trying common ports..."
+          for port in 22 80 443 6881 8080 8443 3000 5000 9090; do
+            echo -n "Port $port: "
+            timeout 2 bash -c "echo test | nc -l -p $port" &>/dev/null &
+            sleep 0.5
+            kill %1 2>/dev/null
+            echo "testing"
+          done
+          echo ""
+          echo "=== System info ==="
+          uname -a
+          cat /etc/os-release 2>/dev/null | head -5
+
       - name: Run seeder
         env:
           RUN_MINUTES: ${{ github.event.inputs.run_minutes || '55' }}
