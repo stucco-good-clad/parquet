@@ -9,6 +9,7 @@ import urllib.parse
 import random
 import string
 import sys
+import subprocess
 
 TORRENT_FILE = os.environ.get("TORRENT_FILE", "r_3620000.torrent")
 BASE_URL = "https://wispy-water-c333.stucco-good-clad.workers.dev"
@@ -124,11 +125,21 @@ def recv_msg(sock):
     return payload[0], payload[1:]
 
 def get_public_ip():
-    for url in ["https://ifconfig.me", "https://api.ipify.org", "https://icanhazip.com"]:
+    import subprocess
+    try:
+        r = subprocess.run(["curl", "-s", "--max-time", "5", "https://icanhazip.com"],
+                           capture_output=True, text=True, timeout=8)
+        if r.returncode == 0 and r.stdout.strip():
+            return r.stdout.strip()
+    except:
+        pass
+    for url in ["https://api.ipify.org", "https://ifconfig.me/ip"]:
         try:
-            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+            req = urllib.request.Request(url, headers={"User-Agent": "curl/7.0"})
             with urllib.request.urlopen(req, timeout=5) as resp:
-                return resp.read().decode().strip()
+                data = resp.read().decode().strip()
+                if data and not data.startswith("<"):
+                    return data
         except:
             continue
     return None
@@ -160,7 +171,7 @@ def tracker_announce(info, peer_id):
         url = f"{tracker}?{'&'.join(parts)}"
         try:
             req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-            with urllib.request.urlopen(req, timeout=5) as resp:
+            with urllib.request.urlopen(req, timeout=10) as resp:
                 data = resp.read()
             result, _ = bdecode(data)
             if b'peers' in result:
